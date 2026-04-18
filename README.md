@@ -28,7 +28,7 @@ const result = await swarm.solve('Should we use microservices or a monolith?')
 console.log(result.answer)       // Synthesized answer from all agents
 console.log(result.confidence)   // 0.87
 console.log(result.consensus)    // Full voting record, dissent preserved
-console.log(result.cost)         // { tokens: 4200, estimatedUsd: 0.0063 }
+console.log(result.cost)         // { tokens, estimatedUsd }
 console.log(result.timing)       // { totalMs: 4200, roundsUsed: 3 }
 ```
 
@@ -331,18 +331,19 @@ OPENAI_API_KEY=sk-... npx tsx examples/debug/index.ts
 OPENAI_API_KEY=sk-... npx tsx examples/streaming/index.ts
 ```
 
-## Cost Efficiency
+## Cost Tracking
 
-Running a 5-agent swarm with GPT-4o-mini costs **~$0.003–0.01 per solve** (3–5 rounds, ~2K–5K tokens). The math layer adds negligible overhead — it's pure TypeScript computation, no LLM calls.
+Every `SwarmResult` includes detailed cost information:
 
+```typescript
+const result = await swarm.solve('task')
+console.log(result.cost.tokens)       // Total tokens used across all agents
+console.log(result.cost.estimatedUsd) // Estimated cost based on model pricing
+console.log(result.timing.totalMs)    // Total wall-clock time
+console.log(result.timing.roundsUsed) // Rounds until consensus
 ```
-5 agents × 3 rounds × GPT-4o-mini = ~$0.006
-Math analysis (28 modules):          ~$0.000 (CPU only)
-Synthesis (1 LLM call):              ~$0.001
-                              Total: ~$0.007
-```
 
-Scale to Opus 4.6 for enterprise: ~$0.50–1.00 per complex analysis.
+The math layer (28 modules) adds zero LLM cost — it's pure TypeScript computation, no API calls.
 
 ## Development
 
