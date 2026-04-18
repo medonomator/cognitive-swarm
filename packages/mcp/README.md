@@ -1,66 +1,171 @@
 # @cognitive-swarm/mcp
 
-MCP (Model Context Protocol) integration for cognitive-swarm agents.
+[![npm](https://img.shields.io/npm/v/@cognitive-swarm/mcp)](https://www.npmjs.com/package/@cognitive-swarm/mcp)
 
-## Installation
+Model Context Protocol integration. Give swarm agents access to external tools via MCP servers.
+
+## Install
 
 ```bash
 npm install @cognitive-swarm/mcp
 ```
 
-## Overview
+## Quick Start
 
-Bridges cognitive-swarm agents with MCP tool servers. The package handles tool discovery, prompt injection, response parsing, and execution. Use `createToolSupport` for a quick all-in-one setup, or compose the lower-level classes for fine-grained control.
+```typescript
+import { createToolSupport } from '@cognitive-swarm/mcp'
 
-## Usage
+// All-in-one setup -- returns registry, executor, prompt builder, and parser
+const support = await createToolSupport(resolvedToolConfig)
 
-```ts
-import { createToolSupport } from '@cognitive-swarm/mcp';
+// Attach to an agent
+const agentDef = {
+  config: { id: 'researcher', /* ... */ },
+  engine,
+  toolSupport: support,
+}
 
-// Quick setup -- returns registry, executor, prompt builder, and parser
-const tools = await createToolSupport({
-  servers: [{ name: 'fs', command: 'mcp-fs' }],
-});
-
-// Inject available tools into an agent's system prompt
-const prompt = tools.promptBuilder.build(tools.registry.listTools());
-
-// Parse tool calls from agent output
-const calls = tools.responseParser.parse(agentOutput);
-
-// Execute a tool call
-const result = await tools.executor.execute(calls[0]);
+// Clean up when done
+support.registry.disconnect()
 ```
 
-### Lower-level API
+## McpToolRegistry
 
-```ts
-import {
-  McpToolRegistry,
-  McpToolExecutor,
-  ToolPromptBuilder,
-  ToolResponseParser,
-} from '@cognitive-swarm/mcp';
+Manages connections to one or more MCP servers:
 
-const registry = new McpToolRegistry();
-const executor = new McpToolExecutor(registry);
-const promptBuilder = new ToolPromptBuilder();
-const parser = new ToolResponseParser();
+```typescript
+import { McpToolRegistry } from '@cognitive-swarm/mcp'
+
+const registry = new McpToolRegistry()
+
+await registry.connect([
+  {
+    name: 'github',
+    transport: { type: 'stdio', command: 'npx', args: ['-y', '@modelcontextprotocol/server-github'] },
+  },
+  {
+    name: 'filesystem',
+    transport: { type: 'stdio', command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem', '/workspace'] },
+  },
+])
+
+const tools = registry.getTools()
 ```
 
-## Exports
+## McpToolExecutor
 
-| Export               | Kind     | Description                              |
-| -------------------- | -------- | ---------------------------------------- |
-| `createToolSupport`  | Function | All-in-one setup helper                  |
-| `McpToolRegistry`    | Class    | Discovers and stores available tools     |
-| `McpToolExecutor`    | Class    | Executes tool calls against MCP servers  |
-| `ToolPromptBuilder`  | Class    | Builds system prompt sections for tools  |
-| `ToolResponseParser` | Class    | Parses tool calls from agent output      |
-| `McpTool`            | Type     | Tool definition                          |
-| `ToolCall`           | Type     | Parsed tool invocation                   |
-| `ToolResult`         | Type     | Result from tool execution               |
+Execute tool calls against connected MCP servers:
 
-## Links
+```typescript
+import { McpToolExecutor } from '@cognitive-swarm/mcp'
 
-- [Root repository](https://github.com/medonomator/cognitive-swarm)
+const executor = new McpToolExecutor(registry, timeoutMs)
+
+const results = await executor.executeAll([
+  { toolName: 'github_search_repos', arguments: { query: 'cognitive-swarm' } },
+])
+```
+
+## Transport Types
+
+```typescript
+type McpTransportConfig =
+  | { type: 'stdio'; command: string; args?: readonly string[] }
+  | { type: 'http'; url: string; headers?: Readonly<Record<string, string>> }
+```
+
+## ToolPromptBuilder & ToolResponseParser
+
+```typescript
+import { ToolPromptBuilder, ToolResponseParser } from '@cognitive-swarm/mcp'
+
+// Generate tool descriptions for agent system prompts
+const builder = new ToolPromptBuilder()
+const prompt = builder.build(tools)
+
+// Parse tool call requests from LLM output
+const parser = new ToolResponseParser()
+const calls = parser.parse(llmResponse)
+```
+
+## Integration with SwarmOrchestrator
+
+```typescript
+const registry = new McpToolRegistry()
+await registry.connect([
+  { name: 'github', transport: { type: 'stdio', command: 'npx', args: ['-y', '@modelcontextprotocol/server-github'] } },
+])
+
+const swarm = new SwarmOrchestrator({
+  agents: [{
+    config: {
+      id: 'researcher',
+      name: 'Researcher',
+      role: 'Research using available tools',
+      personality: { curiosity: 0.9, caution: 0.3, conformity: 0.4, verbosity: 0.7 },
+      listens: ['task:new', 'discovery'],
+      canEmit: ['discovery', 'tool:result'],
+    },
+    engine,
+    toolSupport: {
+      tools: registry.getTools(),
+      executor: new McpToolExecutor(registry),
+      promptInjector: new ToolPromptBuilder(),
+      callParser: new ToolResponseParser(),
+      maxToolCalls: 5,
+    },
+  }],
+})
+```
+
+## Tool Results as Signals
+
+Tool results are emitted as `tool:result` signals on the bus, visible to all agents that listen to this signal type:
+
+```typescript
+interface ToolResultPayload {
+  readonly toolName: string
+  readonly result: string
+  readonly isError: boolean
+  readonly durationMs: number
+  readonly triggeredBy: string   // agent ID
+}
+```
+
+## Per-Agent Tool Config
+
+```typescript
+{
+  config: {
+    id: 'researcher',
+    tools: {
+      servers: [
+        {
+          name: 'github',
+          transport: { type: 'stdio', command: 'npx', args: ['-y', '@modelcontextprotocol/server-github'] },
+          toolFilter: ['github_search_repos', 'github_get_file'],
+        },
+      ],
+      maxToolCalls: 5,
+      toolTimeoutMs: 10_000,
+      personalityGating: true,
+    },
+  },
+}
+```
+
+## Compatible MCP Servers
+
+```bash
+npx -y @modelcontextprotocol/server-github          # GitHub
+npx -y @modelcontextprotocol/server-filesystem /path # Filesystem
+npx -y @modelcontextprotocol/server-brave-search     # Web search
+npx -y @modelcontextprotocol/server-postgres $DSN    # PostgreSQL
+npx -y @modelcontextprotocol/server-fetch            # HTTP fetch
+```
+
+## License
+
+Apache-2.0
+
+[Full documentation](https://medonomator.github.io/cognitive-swarm/packages/mcp) | [GitHub](https://github.com/medonomator/cognitive-swarm)

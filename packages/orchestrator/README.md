@@ -1,6 +1,8 @@
 # @cognitive-swarm/orchestrator
 
-Swarm orchestrator -- ties agents, signals, and consensus into `solve()`.
+[![npm](https://img.shields.io/npm/v/@cognitive-swarm/orchestrator)](https://www.npmjs.com/package/@cognitive-swarm/orchestrator)
+
+The main entry point. `SwarmOrchestrator` wires all components together and runs the round-based solve loop.
 
 ## Install
 
@@ -8,38 +10,142 @@ Swarm orchestrator -- ties agents, signals, and consensus into `solve()`.
 npm install @cognitive-swarm/orchestrator
 ```
 
-## Overview
-
-The top-level runtime that coordinates multi-agent problem solving. It manages round execution, debate resolution, topology control, token tracking, contribution scoring, mathematical analysis, and final synthesis.
-
-## Usage
+## Quick Start
 
 ```typescript
 import { SwarmOrchestrator } from '@cognitive-swarm/orchestrator'
 
-const orchestrator = new SwarmOrchestrator(swarmConfig)
-const result = await orchestrator.solve('How should we architect the new service?')
-// result: { answer, confidence, contributions, cost, timing, signals }
+const swarm = new SwarmOrchestrator(config)
+const result = await swarm.solve('What is the best approach?')
+console.log(result.answer)
+console.log(result.confidence)
 ```
 
-## Exports
+## Methods
+
+### `solve(task): Promise<SwarmResult>`
+
+Runs the swarm to completion and returns the full result.
+
+### `solveWithStream(task): AsyncIterable<SwarmEvent>`
+
+Returns an async iterable that yields events as they happen:
+
+```typescript
+for await (const event of swarm.solveWithStream('Analyze this')) {
+  switch (event.type) {
+    case 'round:start': console.log(`Round ${event.round}`); break
+    case 'signal:emitted': console.log(event.signal.type); break
+    case 'consensus:reached': console.log(event.result.decision); break
+    case 'solve:complete': console.log(event.result.answer); break
+  }
+}
+```
+
+### `solveResumable(task, checkpointId): Promise<SwarmResult>`
+
+Resumes from a checkpoint if one exists. Requires `checkpoint` in config.
+
+### `on(event, handler): () => void`
+
+Register typed event listeners. Returns a cleanup function.
+
+### `destroy()`
+
+Clean up all resources (timers, event listeners).
+
+## Full Configuration
+
+```typescript
+const swarm = new SwarmOrchestrator({
+  agents: [agentDef1, agentDef2],
+
+  consensus: {
+    strategy: 'confidence-weighted',
+    threshold: 0.7,
+    minVoters: 2,
+    maxDebateRounds: 3,
+    conflictResolution: 'debate',
+  },
+
+  maxRounds: 10,
+  maxSignals: 200,
+  timeout: 120_000,
+
+  synthesizer: { llm: myLlmProvider },
+  memory: qdrantVectorMemory,
+
+  math: {
+    entropyThreshold: 0.3,
+    minInformationGain: 0.05,
+    redundancyThreshold: 0.7,
+  },
+
+  advisor: {
+    groupthinkCorrection: true,
+    reputationWeighting: true,
+    weightProvider: reputationTracker,
+    topology: {
+      enabled: true,
+      minConnectivity: 0.3,
+      protectBridgingAgents: true,
+    },
+  },
+
+  retry: { maxRetries: 3, baseDelayMs: 500 },
+  tokenBudget: 50_000,
+  checkpoint: new FileCheckpointStorage('./checkpoints'),
+
+  evolution: {
+    enabled: true,
+    maxEvolvedAgents: 3,
+    evaluationWindow: 5,
+    cooldownRounds: 3,
+  },
+})
+```
+
+## Events
+
+All `SwarmEventMap` event types available via `swarm.on()`:
+
+```typescript
+swarm.on('signal:emitted', (signal) => { ... })
+swarm.on('round:end', ({ round, signalCount }) => { ... })
+swarm.on('consensus:reached', (result) => { ... })
+swarm.on('evolution:spawned', (event) => { ... })
+swarm.on('advisor:action', (advice) => { ... })
+```
+
+## FileCheckpointStorage
+
+Built-in file-based checkpoint storage for resumable solves:
+
+```typescript
+import { FileCheckpointStorage } from '@cognitive-swarm/orchestrator'
+
+const checkpoint = new FileCheckpointStorage('./checkpoints')
+```
+
+Implement `CheckpointStorage` interface for custom backends (Redis, database, etc.).
+
+## Key Exports
 
 | Export | Description |
 |--------|-------------|
 | `SwarmOrchestrator` | Main entry point -- runs the full solve loop |
-| `SwarmAdvisor` | Meta-cognitive layer that injects signals, disables agents, or adjusts topology between rounds |
+| `SwarmAdvisor` | Meta-cognitive layer for groupthink correction, topology |
 | `RoundRunner` | Executes a single round of agent reactions |
-| `DebateRunner` | Runs structured debates between agents with opposing views |
-| `TopologyController` | Controls which agents can see which signals (mesh, star, ring, hierarchy) |
-| `ContributionTracker` | Scores each agent's contribution to the final answer |
-| `TokenTrackingLlmProvider` | Wraps an LLM provider to track token usage and cost |
-| `Synthesizer` | Merges agent contributions into a final coherent answer |
-| `MathBridge` | Connects the orchestrator to `@cognitive-swarm/math` analysis |
+| `DebateRunner` | Runs structured debates between opposing views |
+| `TopologyController` | Controls signal visibility between agents |
+| `ContributionTracker` | Scores each agent's contribution |
+| `TokenTrackingLlmProvider` | Wraps LLM provider for cost tracking |
+| `Synthesizer` | Merges contributions into final answer |
+| `MathBridge` | Connects orchestrator to `@cognitive-swarm/math` |
+| `FileCheckpointStorage` | File-based checkpoint storage |
 
 ## License
 
 Apache-2.0
 
-## Links
-
-- [cognitive-swarm root](https://github.com/medonomator/cognitive-swarm)
+[Full documentation](https://medonomator.github.io/cognitive-swarm/packages/orchestrator) | [GitHub](https://github.com/medonomator/cognitive-swarm)
