@@ -235,13 +235,16 @@ Every tracker calls the same `getSharedTotal()` before each LLM call. This means
 
 ### Cost Estimation
 
-```typescript
-const COST_PER_TOKEN_USD = 0.000003  // GPT-4o-mini pricing
+Cost per token is configurable via `SwarmConfig.costPerToken` (default: `0.000003`, ~GPT-4o-mini):
 
-cost: {
-  tokens: totalTokens,
-  estimatedUsd: totalTokens * COST_PER_TOKEN_USD,
-}
+```typescript
+const swarm = new SwarmOrchestrator({
+  agents,
+  costPerToken: 0.00001, // Override for your model
+})
+
+// result.cost contains:
+// { tokens: totalTokens, estimatedUsd: totalTokens * costPerToken }
 ```
 
 ## Checkpoints
