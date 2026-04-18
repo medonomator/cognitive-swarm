@@ -53,7 +53,7 @@ const detector = new ConflictDetector(bus)
 
 ## License
 
-MIT
+Apache-2.0
 
 ## Links
 

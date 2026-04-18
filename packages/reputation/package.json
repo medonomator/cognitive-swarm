@@ -22,7 +22,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@cognitive-swarm/core": "*"
+    "@cognitive-swarm/core": "workspace:*"
   },
   "license": "Apache-2.0",
   "author": "Dmitry Zorin",
@@ -33,5 +33,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "homepage": "https://medonomator.github.io/cognitive-swarm/",
+  "bugs": {
+    "url": "https://github.com/medonomator/cognitive-swarm/issues"
   }
 }

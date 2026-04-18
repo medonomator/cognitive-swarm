@@ -49,7 +49,7 @@ const filtered = filter.apply(signals)
 
 ## License
 
-MIT
+Apache-2.0
 
 ## Links
 

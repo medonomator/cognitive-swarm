@@ -48,7 +48,7 @@ const stats = pool.stats()
 
 ## License
 
-MIT
+Apache-2.0
 
 ## Links
 

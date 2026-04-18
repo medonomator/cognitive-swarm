@@ -38,5 +38,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "homepage": "https://medonomator.github.io/cognitive-swarm/",
+  "bugs": {
+    "url": "https://github.com/medonomator/cognitive-swarm/issues"
   }
 }

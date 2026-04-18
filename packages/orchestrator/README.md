@@ -38,7 +38,7 @@ const result = await orchestrator.solve('How should we architect the new service
 
 ## License
 
-MIT
+Apache-2.0
 
 ## Links
 

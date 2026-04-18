@@ -22,17 +22,17 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@cognitive-swarm/core": "*",
-    "@cognitive-swarm/math": "*",
-    "@cognitive-swarm/signals": "*",
-    "@cognitive-swarm/agent": "*",
-    "@cognitive-swarm/consensus": "*",
-    "@cognitive-swarm/evolution": "*",
-    "@cognitive-swarm/introspection": "*",
-    "@cognitive-swarm/reputation": "*",
-    "@cognitive-engine/core": "*",
-    "@cognitive-engine/orchestrator": "*",
-    "@cognitive-engine/bandit": "*"
+    "@cognitive-swarm/core": "workspace:*",
+    "@cognitive-swarm/math": "workspace:*",
+    "@cognitive-swarm/signals": "workspace:*",
+    "@cognitive-swarm/agent": "workspace:*",
+    "@cognitive-swarm/consensus": "workspace:*",
+    "@cognitive-swarm/evolution": "workspace:*",
+    "@cognitive-swarm/introspection": "workspace:*",
+    "@cognitive-swarm/reputation": "workspace:*",
+    "@cognitive-engine/core": "^0.2.0",
+    "@cognitive-engine/orchestrator": "^0.2.0",
+    "@cognitive-engine/bandit": "^0.2.0"
   },
   "license": "Apache-2.0",
   "author": "Dmitry Zorin",
@@ -43,5 +43,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "homepage": "https://medonomator.github.io/cognitive-swarm/",
+  "bugs": {
+    "url": "https://github.com/medonomator/cognitive-swarm/issues"
   }
 }

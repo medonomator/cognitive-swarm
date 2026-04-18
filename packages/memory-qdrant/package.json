@@ -23,8 +23,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@cognitive-swarm/core": "*",
-    "@cognitive-engine/core": "*",
+    "@cognitive-swarm/core": "workspace:*",
+    "@cognitive-engine/core": "^0.2.0",
     "@qdrant/js-client-rest": "^1"
   },
   "license": "Apache-2.0",
@@ -36,5 +36,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "homepage": "https://medonomator.github.io/cognitive-swarm/",
+  "bugs": {
+    "url": "https://github.com/medonomator/cognitive-swarm/issues"
   }
 }

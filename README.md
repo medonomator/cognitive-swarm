@@ -1,11 +1,13 @@
 # cognitive-swarm
 
-**Swarm intelligence for LLM agents.** Not a pipeline. Not a chat loop. A signal-based swarm with formal consensus, 19 mathematical modules, and emergent behavior.
+**Swarm intelligence for LLM agents.** Not a pipeline. Not a chat loop. A signal-based swarm with formal consensus, 28 mathematical modules, and emergent behavior.
 
 [![CI](https://github.com/medonomator/cognitive-swarm/actions/workflows/ci.yml/badge.svg)](https://github.com/medonomator/cognitive-swarm/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@cognitive-swarm/orchestrator.svg)](https://www.npmjs.com/package/@cognitive-swarm/orchestrator)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](https://nodejs.org/)
+[![Docs](https://img.shields.io/badge/docs-website-blue.svg)](https://medonomator.github.io/cognitive-swarm/)
 
 ## Quick Start
 
@@ -41,7 +43,7 @@ console.log(result.timing)       // { totalMs: 4200, roundsUsed: 3 }
 | **Self-correction** | None | Human-in-the-loop | Conditional edges | Metacognition + devil's advocate (emergent) |
 | **When to stop** | Fixed steps | Token limit | End node | Free energy + entropy — math decides |
 | **Learning** | None | None | None | Thompson Sampling adapts strategy per context |
-| **Math verification** | None | None | None | 19 modules: Bayesian, causal, game theory, ... |
+| **Math verification** | None | None | None | 28 modules: Bayesian, causal, game theory, ... |
 | **Resilience** | None | Basic retry | None | Retry + circuit breaker + token budget + checkpoints |
 | **Observability** | Logs | Logs | LangSmith | OpenTelemetry (20 span types) |
 | **Interoperability** | Custom | Custom | Custom | A2A + MCP protocols |
@@ -67,7 +69,7 @@ A devil's advocate doesn't exist because you created a "critic agent." It emerge
         └──┬──┘ └──┬──┘ └──┬──┘ └──┬──┘ └──┬──┘
            │       │       │       │       │
      ┌─────▼───────▼───────▼───────▼───────▼─────┐
-     │              Math Bridge (19 modules)       │
+     │              Math Bridge (28 modules)       │
      │  entropy │ bayesian │ game-theory │ causal  │
      │  surprise │ free-energy │ fisher │ regret   │
      │  shapley │ markov │ pso │ topology │ ...    │
@@ -95,7 +97,7 @@ Each agent has a full cognitive pipeline (via [cognitive-engine](https://github.
 | [`@cognitive-swarm/agent`](packages/agent) | LLM-powered swarm agents with Thompson Bandit |
 | [`@cognitive-swarm/consensus`](packages/consensus) | 5 consensus strategies |
 | [`@cognitive-swarm/orchestrator`](packages/orchestrator) | SwarmOrchestrator — the main entry point |
-| [`@cognitive-swarm/math`](packages/math) | 19 mathematical modules (see below) |
+| [`@cognitive-swarm/math`](packages/math) | 28 mathematical modules (see below) |
 | [`@cognitive-swarm/memory-pool`](packages/memory-pool) | In-memory shared knowledge |
 | [`@cognitive-swarm/memory-qdrant`](packages/memory-qdrant) | Persistent vector memory (Qdrant) |
 | [`@cognitive-swarm/reputation`](packages/reputation) | Agent reliability tracking |
@@ -103,15 +105,17 @@ Each agent has a full cognitive pipeline (via [cognitive-engine](https://github.
 | [`@cognitive-swarm/composer`](packages/composer) | Dynamic swarm composition |
 | [`@cognitive-swarm/templates`](packages/templates) | Pre-built swarm configs (research, code review, debug, decision) |
 | [`@cognitive-swarm/evolution`](packages/evolution) | Self-evolving swarm — agents spawn agents |
-| [`@cognitive-swarm/observer`](packages/observer) | Swarm observation and analysis |
+| [`@cognitive-swarm/evaluation`](packages/evaluation) | Outcome evaluation and grounding |
 | [`@cognitive-swarm/benchmarks`](packages/benchmarks) | Performance benchmarking harness |
 | [`@cognitive-swarm/mcp`](packages/mcp) | Model Context Protocol tool integration |
 | [`@cognitive-swarm/otel`](packages/otel) | OpenTelemetry distributed tracing (20 event types) |
 | [`@cognitive-swarm/a2a`](packages/a2a) | A2A protocol — interop with any agent framework |
+| [`@cognitive-swarm/tools-web-fetch`](packages/tools-web-fetch) | Web fetch & scrape MCP server |
+| [`@cognitive-swarm/tools-web-search`](packages/tools-web-search) | Web search MCP server (Brave Search) |
 
 ## Mathematical Foundation
 
-Not prompt engineering. **19 computational mathematics modules** with LLMs as components.
+Not prompt engineering. **28 computational mathematics modules** with LLMs as components.
 
 ### Information Theory
 | Module | What it does |
@@ -333,7 +337,7 @@ Running a 5-agent swarm with GPT-4o-mini costs **~$0.003–0.01 per solve** (3�
 
 ```
 5 agents × 3 rounds × GPT-4o-mini = ~$0.006
-Math analysis (19 modules):          ~$0.000 (CPU only)
+Math analysis (28 modules):          ~$0.000 (CPU only)
 Synthesis (1 LLM call):              ~$0.001
                               Total: ~$0.007
 ```
@@ -344,7 +348,7 @@ Scale to Opus 4.6 for enterprise: ~$0.50–1.00 per complex analysis.
 
 ```bash
 npm install        # Install all dependencies
-npm run build      # Build all 18 packages
+npm run build      # Build all 20 packages
 npm run test       # Run tests across all packages
 npm run lint       # Lint all packages
 ```

@@ -8,3 +8,4 @@ dist
 results/
 observe-daily.sh
 observe-weekly.sh
+.vitepress/cache/

@@ -54,7 +54,7 @@ emitter.on('round:start', (event) => { /* ... */ })
 
 ## License
 
-MIT
+Apache-2.0
 
 ## Links
 

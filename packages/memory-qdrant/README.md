@@ -44,7 +44,7 @@ const results = await memory.search('high availability requirements', { limit: 1
 
 ## License
 
-MIT
+Apache-2.0
 
 ## Links
 

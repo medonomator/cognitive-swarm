@@ -22,7 +22,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@cognitive-swarm/core": "*"
+    "@cognitive-swarm/core": "workspace:*"
   },
   "peerDependencies": {
     "@opentelemetry/api": "^1.7.0"
@@ -40,5 +40,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "homepage": "https://medonomator.github.io/cognitive-swarm/",
+  "bugs": {
+    "url": "https://github.com/medonomator/cognitive-swarm/issues"
   }
 }

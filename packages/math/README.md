@@ -88,7 +88,7 @@ import { ShapleyValuator } from '@cognitive-swarm/math'
 
 ## License
 
-MIT
+Apache-2.0
 
 ## Links
 
