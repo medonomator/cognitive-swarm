@@ -1,5 +1,7 @@
 # @cognitive-swarm/evolution
 
+[![npm](https://img.shields.io/npm/v/@cognitive-swarm/evolution)](https://www.npmjs.com/package/@cognitive-swarm/evolution)
+
 Self-evolving swarm: agents detect expertise gaps, propose new specialists, and dissolve underperformers.
 
 ## Install

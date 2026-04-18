@@ -1,5 +1,7 @@
 # @cognitive-swarm/orchestrator
 
+[![npm](https://img.shields.io/npm/v/@cognitive-swarm/orchestrator)](https://www.npmjs.com/package/@cognitive-swarm/orchestrator)
+
 The main entry point. `SwarmOrchestrator` wires all components together and runs the round-based solve loop.
 
 ## Install

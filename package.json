@@ -40,9 +40,11 @@
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",
+    "mermaid": "^11.14.0",
     "turbo": "^2.5.0",
     "typescript": "^5.8.0",
     "vitepress": "^1.6.4",
+    "vitepress-plugin-mermaid": "^2.0.17",
     "vitest": "^3.1.0"
   },
   "packageManager": "npm@10.0.0",
