@@ -1,5 +1,7 @@
 # @cognitive-swarm/agent
 
+[![npm](https://img.shields.io/npm/v/@cognitive-swarm/agent)](https://www.npmjs.com/package/@cognitive-swarm/agent)
+
 LLM-powered swarm agents with Thompson Sampling strategy selection. Each agent is a full cognitive-engine pipeline with a swarm-specific reaction layer.
 
 ## Install

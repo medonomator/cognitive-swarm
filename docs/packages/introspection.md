@@ -1,5 +1,7 @@
 # @cognitive-swarm/introspection
 
+[![npm](https://img.shields.io/npm/v/@cognitive-swarm/introspection)](https://www.npmjs.com/package/@cognitive-swarm/introspection)
+
 Deadlock detection, groupthink detection, cost breakdown, and signal graph analysis. Observes swarm behavior and detects pathological patterns that degrade output quality.
 
 ## Install

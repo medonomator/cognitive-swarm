@@ -1,5 +1,7 @@
 # @cognitive-swarm/reputation
 
+[![npm](https://img.shields.io/npm/v/@cognitive-swarm/reputation)](https://www.npmjs.com/package/@cognitive-swarm/reputation)
+
 Agent reliability tracking with Bayesian estimation. Weights agents by past performance using Beta distribution posteriors.
 
 ## Install

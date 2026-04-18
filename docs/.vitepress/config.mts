@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
 
-export default defineConfig({
+export default withMermaid(defineConfig({
   title: 'cognitive-swarm',
   description: 'Signal-based swarm intelligence for LLM agents. Not a pipeline. Not a chat loop.',
   base: '/cognitive-swarm/',
@@ -90,5 +91,6 @@ export default defineConfig({
       message: 'Released under the Apache 2.0 License.',
       copyright: 'Copyright 2026 Dmitry Zorin'
     }
-  }
-})
+  },
+  mermaid: {},
+}))

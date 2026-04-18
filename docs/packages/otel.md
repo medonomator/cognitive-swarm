@@ -1,5 +1,7 @@
 # @cognitive-swarm/otel
 
+[![npm](https://img.shields.io/npm/v/@cognitive-swarm/otel)](https://www.npmjs.com/package/@cognitive-swarm/otel)
+
 OpenTelemetry distributed tracing for cognitive-swarm. Zero overhead when no provider is configured.
 
 ## Install

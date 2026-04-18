@@ -1,5 +1,7 @@
 # @cognitive-swarm/consensus
 
+[![npm](https://img.shields.io/npm/v/@cognitive-swarm/consensus)](https://www.npmjs.com/package/@cognitive-swarm/consensus)
+
 The ConsensusEngine evaluates proposals and votes using pluggable strategies.
 
 ## Install

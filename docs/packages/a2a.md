@@ -1,5 +1,7 @@
 # @cognitive-swarm/a2a
 
+[![npm](https://img.shields.io/npm/v/@cognitive-swarm/a2a)](https://www.npmjs.com/package/@cognitive-swarm/a2a)
+
 A2A (Agent-to-Agent) protocol integration. Expose any cognitive-swarm as a standard A2A HTTP endpoint. Any framework (CrewAI, AutoGen, LangChain) can call it.
 
 ## Install

@@ -1,5 +1,7 @@
 # @cognitive-swarm/templates
 
+[![npm](https://img.shields.io/npm/v/@cognitive-swarm/templates)](https://www.npmjs.com/package/@cognitive-swarm/templates)
+
 Pre-built swarm configurations for common tasks. Each template returns a `SwarmConfig` ready to pass to `SwarmOrchestrator`.
 
 ## Install

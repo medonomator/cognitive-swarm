@@ -1,5 +1,7 @@
 # @cognitive-swarm/core
 
+[![npm](https://img.shields.io/npm/v/@cognitive-swarm/core)](https://www.npmjs.com/package/@cognitive-swarm/core)
+
 Core types, interfaces, and event emitter for the cognitive-swarm framework.
 
 ## Install

@@ -1,5 +1,7 @@
 # @cognitive-swarm/mcp
 
+[![npm](https://img.shields.io/npm/v/@cognitive-swarm/mcp)](https://www.npmjs.com/package/@cognitive-swarm/mcp)
+
 Model Context Protocol integration. Give swarm agents access to external tools via MCP servers.
 
 ## Install

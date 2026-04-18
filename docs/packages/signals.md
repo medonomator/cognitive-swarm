@@ -1,5 +1,7 @@
 # @cognitive-swarm/signals
 
+[![npm](https://img.shields.io/npm/v/@cognitive-swarm/signals)](https://www.npmjs.com/package/@cognitive-swarm/signals)
+
 The SignalBus -- the nervous system of the swarm. All agent communication flows through it.
 
 ## Install
