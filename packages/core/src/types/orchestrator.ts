@@ -32,6 +32,8 @@ export type MathStoppingReason =
   | 'secretary-threshold'
   | 'fragmentation-predicted'
   | 'surprise-collapsed'
+  | 'chaos-critical'
+  | 'algedonic-emergency'
 
 /** Math analysis included in SwarmResult. */
 export interface MathAnalysis {
@@ -197,6 +199,127 @@ export interface MathAnalysis {
       readonly rationale: string
     }
   } | null
+  /** KL-divergence analysis: per-agent divergence from consensus + drift. */
+  readonly klDivergence: {
+    /** Mean KL divergence of agents from consensus (bits). */
+    readonly meanDivergence: number
+    /** Agents deviating strongly from consensus. */
+    readonly outliers: readonly string[]
+    /** Mean pairwise Jensen-Shannon divergence between agents (bits). */
+    readonly meanPairwiseJSD: number
+    /** KL drift of consensus between last two rounds. */
+    readonly consensusDrift: number
+    /** Drift trend: positive = beliefs diverging, negative = converging. */
+    readonly driftTrend: number
+  } | null
+  /** Chaos detection: period analysis, Sharkovskii, Feigenbaum cascade. */
+  readonly chaos: {
+    /** Detected oscillation period (0 = no cycle). */
+    readonly period: number
+    /** Period-3 detected → Li-Yorke chaos guaranteed. */
+    readonly sharkovskiiTriggered: boolean
+    /** Period-doubling cascade detected (2→4→8→...). */
+    readonly doublingDetected: boolean
+    /** Largest Lyapunov exponent. Positive = chaotic, negative = stable orbit. */
+    readonly lyapunovExponent: number
+    /** Overall risk: 'none' | 'low' | 'moderate' | 'high' | 'critical'. */
+    readonly chaosRisk: string
+    /** 'continue' | 'monitor' | 'synthesize' | 'restructure' | 'force-decision'. */
+    readonly recommendation: string
+    /** Estimated rounds until full chaos (null if not approaching). */
+    readonly estimatedRoundsToChaos: number | null
+  } | null
+  /** Lyapunov stability: formal consensus stability analysis. */
+  readonly lyapunovStability: {
+    /** Current Lyapunov function V = Σ(beliefᵢ - consensus)². */
+    readonly lyapunovV: number
+    /** Time derivative V̇. Negative = converging. */
+    readonly lyapunovDot: number
+    /** Whether consensus is asymptotically stable. */
+    readonly stable: boolean
+    /** 'asymptotic' | 'marginal' | 'unstable'. */
+    readonly type: string
+    /** Max perturbation the consensus can absorb. */
+    readonly perturbationTolerance: number
+    /** Confidence adjusted for stability (fragile → lower). */
+    readonly adjustedConfidence: number
+    /** Exponential convergence rate. Negative = converging. */
+    readonly convergenceRate: number
+    /** Routh-Hurwitz algebraic stability test. */
+    readonly routhHurwitz: {
+      readonly signChanges: number
+      readonly stable: boolean
+    } | null
+  } | null
+  /** Damped oscillation classification of convergence regime. */
+  readonly damping: {
+    /** Damping ratio ζ. >1 = overdamped, =1 = critical, <1 = underdamped. */
+    readonly dampingRatio: number
+    /** Natural frequency ω (rate of convergence). */
+    readonly naturalFrequency: number
+    /** 'overdamped' | 'critically-damped' | 'underdamped' | 'undetermined'. */
+    readonly regime: string
+    /** Number of zero-crossings (oscillations). */
+    readonly oscillationCount: number
+    /** Estimated rounds to settle within 5% of equilibrium. */
+    readonly settlingRounds: number | null
+    /** Diagnostic message. */
+    readonly diagnostic: string
+  } | null
+  /** System archetypes: structural pathological patterns. */
+  readonly archetypes: {
+    /** All detected archetypes. */
+    readonly detected: readonly {
+      readonly name: string
+      readonly confidence: number
+      readonly description: string
+      readonly leveragePoint: string
+      readonly leverageLevel: number
+    }[]
+    /** Whether any archetype was detected. */
+    readonly hasArchetypes: boolean
+    /** Most critical archetype name. */
+    readonly primaryName: string | null
+    /** Confidence of primary archetype. */
+    readonly primaryConfidence: number | null
+  } | null
+  /** SVD analysis: latent dimensions of agent-proposal debate. */
+  readonly svd: {
+    /** Singular values (sorted descending). */
+    readonly singularValues: readonly number[]
+    /** Explained variance per dimension ∈ [0, 1]. */
+    readonly explainedVariance: readonly number[]
+    /** Effective rank (dimensions for 95% variance). */
+    readonly effectiveRank: number
+    /** Whether the debate is essentially 1-dimensional. */
+    readonly oneDimensional: boolean
+    /** Diagnostic message. */
+    readonly diagnostic: string
+  } | null
+  /** Proposal energy: stocks & flows momentum tracking. */
+  readonly proposalEnergy: {
+    /** Leader proposal ID. */
+    readonly leader: string | null
+    /** Fastest rising proposal ID. */
+    readonly risingFastest: string | null
+    /** Total energy across all proposals. */
+    readonly totalEnergy: number
+    /** Whether any proposal has clear dominance. */
+    readonly clearLeader: boolean
+    /** Per-proposal trends. */
+    readonly trends: Readonly<Record<string, 'rising' | 'stable' | 'declining'>>
+  } | null
+  /** Projection consensus: weighted least-squares alternative consensus. */
+  readonly projectionConsensus: {
+    /** Optimal consensus distribution. */
+    readonly consensus: Readonly<Record<string, number>>
+    /** Total residual (lower = more agreement). */
+    readonly totalResidual: number
+    /** Mean residual. */
+    readonly meanResidual: number
+    /** Whether consensus is tight. */
+    readonly tight: boolean
+  } | null
   readonly stoppingReason: MathStoppingReason | null
 }
 
@@ -271,6 +394,10 @@ export interface SwarmAdvisorConfig {
   readonly warmupRounds?: number
   /** Adaptive topology configuration (default: disabled). */
   readonly topology?: TopologyConfig
+  /** Meta-agent LLM for high-level debate analysis (default: disabled). */
+  readonly metaAgentLlm?: LlmProvider
+  /** Meta-agent: analyze every N rounds (default: 3). */
+  readonly metaAgentInterval?: number
 }
 
 /** Resolved advisor config - all fields required. */
@@ -281,6 +408,8 @@ export interface ResolvedSwarmAdvisorConfig {
   readonly weightProvider: AgentWeightProvider | null
   readonly warmupRounds: number
   readonly topology: ResolvedTopologyConfig | null
+  readonly metaAgentLlm: LlmProvider | null
+  readonly metaAgentInterval: number
 }
 
 /**
@@ -433,6 +562,8 @@ export interface SwarmConfig {
   readonly tokenBudget?: number
   /** Checkpoint storage for resumable solves. */
   readonly checkpoint?: CheckpointStorage
+  /** Mid-solve evolution: spawn/dissolve agents based on gaps. */
+  readonly evolution?: EvolutionConfig
 }
 
 /** Resolved swarm config - all fields required. */
@@ -455,10 +586,12 @@ export interface ResolvedSwarmConfig {
   readonly retry: ResolvedRetryConfig
   readonly tokenBudget: number | null
   readonly checkpoint: CheckpointStorage | null
+  readonly evolution: ResolvedEvolutionConfig
 }
 
 /** Final result of a swarm solve(). */
 export interface SwarmResult {
+  readonly solveId: string
   readonly answer: string
   readonly confidence: number
   readonly consensus: ConsensusResult
@@ -469,6 +602,7 @@ export interface SwarmResult {
   readonly mathAnalysis: MathAnalysis
   readonly advisorReport: AdvisorReport | null
   readonly debateResults: readonly DebateResult[]
+  readonly evolutionReport: EvolutionReport | null
 }
 
 export interface SwarmCost {
@@ -510,4 +644,102 @@ export type SwarmEvent =
   | { readonly type: 'debate:round'; readonly round: number; readonly posteriors: Readonly<Record<string, number>> }
   | { readonly type: 'debate:end'; readonly result: DebateResult }
   | { readonly type: 'topology:updated'; readonly neighbors: ReadonlyMap<string, ReadonlySet<string>>; readonly reason: string }
+  | { readonly type: 'evolution:spawned'; readonly agentId: string; readonly domain: string; readonly reason: string }
+  | { readonly type: 'evolution:dissolved'; readonly agentId: string; readonly reason: string }
   | { readonly type: 'solve:complete'; readonly result: SwarmResult }
+
+// ── Evaluation types ────────────────────────────────────────────
+
+/** Outcome of a solve() as determined by real-world feedback. */
+export type OutcomeVerdict = 'correct' | 'partial' | 'incorrect'
+
+/** Recorded outcome for a completed solve. */
+export interface OutcomeRecord {
+  readonly solveId: string
+  readonly verdict: OutcomeVerdict
+  readonly taskType: string
+  readonly details?: string
+  readonly predictedConfidence: number
+  readonly timestamp: number
+}
+
+/** Calibration data point: predicted confidence vs actual accuracy. */
+export interface CalibrationPoint {
+  readonly bucket: number
+  readonly predictedMean: number
+  readonly actualAccuracy: number
+  readonly count: number
+}
+
+/** Summary report from outcome tracking. */
+export interface EvaluationReport {
+  readonly totalOutcomes: number
+  readonly accuracy: number
+  readonly partialRate: number
+  readonly calibration: readonly CalibrationPoint[]
+  readonly calibrationError: number
+  readonly outcomesByTaskType: Readonly<Record<string, {
+    readonly correct: number
+    readonly partial: number
+    readonly incorrect: number
+  }>>
+}
+
+/** Pluggable evaluator for automatic outcome assessment. */
+export interface OutcomeEvaluator {
+  evaluate(task: string, answer: string, criteria?: string): Promise<{
+    readonly verdict: OutcomeVerdict
+    readonly details: string
+    readonly confidence: number
+  }>
+}
+
+// ── Evolution types ─────────────────────────────────────────────
+
+/** Evolution configuration for mid-solve agent spawning/dissolution. */
+export interface EvolutionConfig {
+  /** Enable mid-solve evolution. Default: false */
+  readonly enabled?: boolean
+  /** Hard cap on evolved agents. Default: 3 */
+  readonly maxEvolvedAgents?: number
+  /** Rounds before evaluating spawned agents. Default: 5 */
+  readonly evaluationWindow?: number
+  /** Minimum value score to keep a spawned agent. Default: 0.5 */
+  readonly minValueForKeep?: number
+  /** Rounds after dissolving before same domain can spawn again. Default: 3 */
+  readonly cooldownRounds?: number
+  /** NMI above which evolved agents are considered redundant. Default: 0.8 */
+  readonly nmiPruneThreshold?: number
+}
+
+/** Resolved evolution config — all fields required. */
+export interface ResolvedEvolutionConfig {
+  readonly enabled: boolean
+  readonly maxEvolvedAgents: number
+  readonly evaluationWindow: number
+  readonly minValueForKeep: number
+  readonly cooldownRounds: number
+  readonly nmiPruneThreshold: number
+}
+
+/** Log entry for a spawned agent. */
+export interface EvolutionSpawnEntry {
+  readonly agentId: string
+  readonly domain: string
+  readonly round: number
+  readonly reason: string
+}
+
+/** Log entry for a dissolved agent. */
+export interface EvolutionDissolveEntry {
+  readonly agentId: string
+  readonly round: number
+  readonly reason: string
+}
+
+/** Report of evolution activity during a solve. */
+export interface EvolutionReport {
+  readonly spawned: readonly EvolutionSpawnEntry[]
+  readonly dissolved: readonly EvolutionDissolveEntry[]
+  readonly activeEvolvedCount: number
+}

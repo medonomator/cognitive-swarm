@@ -37,18 +37,30 @@ export class OpenAiLlmProvider implements LlmProvider {
     this.defaultModel = model
   }
 
+  private isGpt5Family(): boolean {
+    return /^(gpt-5|o[1-4])/.test(this.defaultModel)
+  }
+
   async complete(
     messages: LlmMessage[],
     options?: LlmOptions,
   ): Promise<LlmResponse> {
+    const model = options?.model ?? this.defaultModel
+    const isGpt5 = /^(gpt-5|o[1-4])/.test(model)
+    // GPT-5.x generates more verbose output; enforce floor to prevent truncation
+    const rawMaxTokens = options?.maxTokens ?? 1500
+    const maxTokens = isGpt5 ? Math.max(rawMaxTokens, 1500) : rawMaxTokens
+
     const response = await this.client.chat.completions.create({
-      model: options?.model ?? this.defaultModel,
+      model,
       messages: messages.map((m) => ({
         role: m.role,
         content: m.content,
       })),
-      temperature: options?.temperature ?? 0,
-      max_tokens: options?.maxTokens ?? 500,
+      ...(isGpt5 ? {} : { temperature: options?.temperature ?? 0 }),
+      ...(isGpt5
+        ? { max_completion_tokens: maxTokens }
+        : { max_tokens: maxTokens }),
     })
 
     const choice = response.choices[0]
@@ -76,14 +88,22 @@ export class OpenAiLlmProvider implements LlmProvider {
     messages: LlmMessage[],
     options?: LlmOptions,
   ): Promise<LlmResponse & { parsed: T }> {
+    const model = options?.model ?? this.defaultModel
+    const isGpt5 = /^(gpt-5|o[1-4])/.test(model)
+    // GPT-5.x generates more verbose output; enforce floor to prevent truncation
+    const rawMaxTokens = options?.maxTokens ?? 1500
+    const maxTokens = isGpt5 ? Math.max(rawMaxTokens, 1500) : rawMaxTokens
+
     const response = await this.client.chat.completions.create({
-      model: options?.model ?? this.defaultModel,
+      model,
       messages: messages.map((m) => ({
         role: m.role,
         content: m.content,
       })),
-      temperature: options?.temperature ?? 0,
-      max_tokens: options?.maxTokens ?? 500,
+      ...(isGpt5 ? {} : { temperature: options?.temperature ?? 0 }),
+      ...(isGpt5
+        ? { max_completion_tokens: maxTokens }
+        : { max_tokens: maxTokens }),
       response_format: { type: 'json_object' },
     })
 

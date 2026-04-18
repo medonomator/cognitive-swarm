@@ -25,6 +25,19 @@ export interface SwarmEventMap {
   'synthesis:complete': SynthesisCompleteEvent
   'topology:updated': { neighbors: ReadonlyMap<string, ReadonlySet<string>>; reason: string }
   'tool:called': ToolCalledEvent
+  'evolution:spawned': EvolutionSpawnedEvent
+  'evolution:dissolved': EvolutionDissolvedEvent
+}
+
+export interface EvolutionSpawnedEvent {
+  readonly agentId: string
+  readonly domain: string
+  readonly reason: string
+}
+
+export interface EvolutionDissolvedEvent {
+  readonly agentId: string
+  readonly reason: string
 }
 
 export interface RoundStartEvent {

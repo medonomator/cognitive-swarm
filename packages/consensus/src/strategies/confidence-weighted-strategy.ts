@@ -9,6 +9,11 @@ import type {
 /**
  * Votes weighted by each voter's confidence and voting weight.
  * Agents with higher confidence and weight have more influence.
+ *
+ * Note: causal levels (correlation/intervention/counterfactual) affect
+ * signal routing priority, NOT vote weight. All votes are equal in
+ * consensus regardless of causal level — this prevents counterfactual
+ * challenges from drowning out agreement.
  */
 export class ConfidenceWeightedStrategy implements ConsensusStrategy {
   readonly id = 'confidence-weighted'

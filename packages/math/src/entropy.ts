@@ -19,7 +19,7 @@ export interface InformationGain {
   readonly before: number
   /** Entropy after the evidence. */
   readonly after: number
-  /** Bits of uncertainty removed (before - after). */
+  /** Absolute entropy change |before - after| in bits. */
   readonly gain: number
   /** Relative gain: gain / before ∈ [0, 1]. */
   readonly relativeGain: number
@@ -97,7 +97,9 @@ export class EntropyTracker {
 
   /**
    * Information gain from the last distribution update.
-   * Measures how many bits of uncertainty the last round removed.
+   * Measures how much the entropy changed (in either direction).
+   * Both convergence (entropy ↓) and divergence (entropy ↑ from new
+   * discoveries) represent information — a stagnant swarm has gain ≈ 0.
    */
   informationGain(): InformationGain {
     if (this.history.length < 2) {
@@ -112,25 +114,29 @@ export class EntropyTracker {
 
     const before = this.history[this.history.length - 2]!
     const after = this.history[this.history.length - 1]!
-    const gain = Math.max(0, before - after)
+    const gain = Math.abs(before - after)
 
     return {
       before,
       after,
       gain,
-      relativeGain: before > 0 ? gain / before : 0,
+      relativeGain: before > 0 ? gain / before : (after > 0 ? 1 : 0),
     }
   }
 
   /**
    * Average information gain per round.
-   * If this is very low, the swarm is stuck and should stop.
+   * Uses absolute entropy change per round — if this is very low,
+   * the swarm is stuck (entropy neither rising nor falling) and should stop.
    */
   averageGainPerRound(): number {
     if (this.history.length < 2) return 0
 
-    const totalGain = this.history[0]! - this.history[this.history.length - 1]!
-    return Math.max(0, totalGain / (this.history.length - 1))
+    let totalAbsChange = 0
+    for (let i = 1; i < this.history.length; i++) {
+      totalAbsChange += Math.abs(this.history[i]! - this.history[i - 1]!)
+    }
+    return totalAbsChange / (this.history.length - 1)
   }
 
   /**

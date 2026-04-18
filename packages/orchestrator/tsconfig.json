@@ -12,6 +12,7 @@
   "references": [
     { "path": "../core" },
     { "path": "../math" },
+    { "path": "../evolution" },
     { "path": "../introspection" },
     { "path": "../reputation" }
   ]

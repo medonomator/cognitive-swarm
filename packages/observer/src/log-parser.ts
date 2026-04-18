@@ -260,18 +260,19 @@ export function buildAnalysisTask(conversations: Conversation[]): string {
     trimmedSummaries = trimmedSummaries.slice(0, 15_000) + '\n\n... [remaining conversations truncated]'
   }
 
-  return `Analyze these Claude Code conversations from the last 24 hours.
-Your job is to extract insights, patterns, decisions, and potential issues.
+  return `You are analyzing ${mainConversations.length} Claude Code sessions from the last 24 hours.
 
 ${trimmedSummaries}
 
-For each conversation, identify:
-1. What was the user working on?
-2. What decisions were made and why?
-3. Were there any bugs/errors? What caused them? How were they fixed?
-4. Are there recurring patterns or repeated mistakes?
-5. What new knowledge was gained?
-6. What should be remembered for future sessions?
+DELIBERATE on these questions — there is no single correct answer, argue your perspective:
 
-Focus on ACTIONABLE insights, not just summaries.`
+1. DECISIONS & CONTRADICTIONS: Which decisions made today might conflict with past decisions or established patterns? Should any be revisited? What trade-offs were implicit but not stated?
+
+2. MISTAKES & SYSTEMIC ISSUES: Which errors indicate systemic problems vs one-off typos? What procedural rules should be extracted to prevent recurrence? Are any "fixes" actually masking deeper issues?
+
+3. PRIORITIES & RISKS: Based on today's work, what should the user focus on next? What risks or blind spots are they ignoring? Is any work being over-invested or under-invested?
+
+4. BEHAVIORAL PATTERNS: Are there recurring patterns (positive or negative) the user may not be aware of? Are there productivity anti-patterns? What knowledge was gained that should be preserved?
+
+Challenge each other's interpretations. If you disagree with another agent's assessment, say why. Vote on what matters most.`
 }

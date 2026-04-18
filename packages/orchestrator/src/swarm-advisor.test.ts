@@ -56,6 +56,9 @@ function makeConfig(
     reputationWeighting: true,
     weightProvider: null,
     warmupRounds: 2,
+    topology: null,
+    metaAgentLlm: null,
+    metaAgentInterval: 3,
     ...overrides,
   }
 }
@@ -116,7 +119,7 @@ function makeMathBridge(analysis: Partial<MathAnalysis> = {}): MathBridge {
 
 describe('SwarmAdvisor', () => {
   describe('warmup period', () => {
-    it('does not produce advice before warmup rounds', () => {
+    it('does not produce advice before warmup rounds', async () => {
       const advisor = new SwarmAdvisor(makeConfig({ warmupRounds: 3 }))
       const signals = [makeVoteSignal('agent-1', 'p1', 'agree')]
       const mathBridge = makeMathBridge({
@@ -128,14 +131,14 @@ describe('SwarmAdvisor', () => {
       })
 
       // Round 1 and 2 - within warmup
-      const advice1 = advisor.evaluateRound(signals, 1, mathBridge, ['agent-1', 'agent-2'])
-      const advice2 = advisor.evaluateRound(signals, 2, mathBridge, ['agent-1', 'agent-2'])
+      const advice1 = await advisor.evaluateRound(signals, 1, mathBridge, ['agent-1', 'agent-2'])
+      const advice2 = await advisor.evaluateRound(signals, 2, mathBridge, ['agent-1', 'agent-2'])
 
       expect(advice1).toHaveLength(0)
       expect(advice2).toHaveLength(0)
     })
 
-    it('can produce advice after warmup rounds', () => {
+    it('can produce advice after warmup rounds', async () => {
       const advisor = new SwarmAdvisor(makeConfig({ warmupRounds: 2 }))
 
       // Need signals that create a groupthink situation
@@ -161,9 +164,9 @@ describe('SwarmAdvisor', () => {
       })
 
       // Feed round 1 to build introspection state
-      advisor.evaluateRound(signals, 1, mathBridge, agents)
+      await advisor.evaluateRound(signals, 1, mathBridge, agents)
       // Round 2 - past warmup, should detect groupthink
-      const advice = advisor.evaluateRound(signals, 2, mathBridge, agents)
+      const advice = await advisor.evaluateRound(signals, 2, mathBridge, agents)
 
       // Should have at least one groupthink correction
       expect(advice.length).toBeGreaterThanOrEqual(0) // may or may not trigger depending on introspector state
@@ -171,7 +174,7 @@ describe('SwarmAdvisor', () => {
   })
 
   describe('groupthink correction', () => {
-    it('injects doubt signal when groupthink is severe', () => {
+    it('injects doubt signal when groupthink is severe', async () => {
       const advisor = new SwarmAdvisor(makeConfig({ warmupRounds: 0 }))
       const agents = ['a1', 'a2', 'a3']
 
@@ -198,9 +201,9 @@ describe('SwarmAdvisor', () => {
       })
 
       // Feed multiple rounds to build up severe groupthink detection
-      advisor.evaluateRound(votesOnly, 0, mathBridge, agents)
-      advisor.evaluateRound(votesOnly, 1, mathBridge, agents)
-      const advice = advisor.evaluateRound(votesOnly, 2, mathBridge, agents)
+      await advisor.evaluateRound(votesOnly, 0, mathBridge, agents)
+      await advisor.evaluateRound(votesOnly, 1, mathBridge, agents)
+      const advice = await advisor.evaluateRound(votesOnly, 2, mathBridge, agents)
 
       // Should inject a doubt signal
       const injections = advice.filter((a) => a.type === 'inject-signal')
@@ -215,7 +218,7 @@ describe('SwarmAdvisor', () => {
       }
     })
 
-    it('does not inject when groupthink correction is disabled', () => {
+    it('does not inject when groupthink correction is disabled', async () => {
       const advisor = new SwarmAdvisor(
         makeConfig({ groupthinkCorrection: false, warmupRounds: 0 }),
       )
@@ -233,8 +236,8 @@ describe('SwarmAdvisor', () => {
         },
       })
 
-      advisor.evaluateRound(signals, 0, mathBridge, agents)
-      const advice = advisor.evaluateRound(signals, 1, mathBridge, agents)
+      await advisor.evaluateRound(signals, 0, mathBridge, agents)
+      const advice = await advisor.evaluateRound(signals, 1, mathBridge, agents)
 
       const injections = advice.filter((a) => a.type === 'inject-signal')
       expect(injections).toHaveLength(0)
@@ -242,7 +245,7 @@ describe('SwarmAdvisor', () => {
   })
 
   describe('Shapley pruning', () => {
-    it('recommends disabling redundant agents when enabled', () => {
+    it('recommends disabling redundant agents when enabled', async () => {
       const advisor = new SwarmAdvisor(
         makeConfig({ agentPruning: true, warmupRounds: 0 }),
       )
@@ -258,7 +261,7 @@ describe('SwarmAdvisor', () => {
       })
 
       // Round 3+ required for pruning
-      const advice = advisor.evaluateRound(signals, 3, mathBridge, agents)
+      const advice = await advisor.evaluateRound(signals, 3, mathBridge, agents)
       const disableAdvice = advice.filter((a) => a.type === 'disable-agent')
 
       expect(disableAdvice).toHaveLength(1)
@@ -268,7 +271,7 @@ describe('SwarmAdvisor', () => {
       }
     })
 
-    it('does not prune when agentPruning is disabled', () => {
+    it('does not prune when agentPruning is disabled', async () => {
       const advisor = new SwarmAdvisor(
         makeConfig({ agentPruning: false, warmupRounds: 0 }),
       )
@@ -282,12 +285,12 @@ describe('SwarmAdvisor', () => {
         },
       })
 
-      const advice = advisor.evaluateRound(signals, 3, mathBridge, agents)
+      const advice = await advisor.evaluateRound(signals, 3, mathBridge, agents)
       const disableAdvice = advice.filter((a) => a.type === 'disable-agent')
       expect(disableAdvice).toHaveLength(0)
     })
 
-    it('does not double-disable the same agent', () => {
+    it('does not double-disable the same agent', async () => {
       const advisor = new SwarmAdvisor(
         makeConfig({ agentPruning: true, warmupRounds: 0 }),
       )
@@ -301,8 +304,8 @@ describe('SwarmAdvisor', () => {
         },
       })
 
-      advisor.evaluateRound(signals, 3, mathBridge, agents)
-      const advice2 = advisor.evaluateRound(signals, 4, mathBridge, agents)
+      await advisor.evaluateRound(signals, 3, mathBridge, agents)
+      const advice2 = await advisor.evaluateRound(signals, 4, mathBridge, agents)
       const disableAdvice = advice2.filter((a) => a.type === 'disable-agent')
 
       expect(disableAdvice).toHaveLength(0)
@@ -403,7 +406,7 @@ describe('SwarmAdvisor', () => {
       expect(advisor.getReport().reputationApplied).toBe(true)
     })
 
-    it('tracks disabled agents', () => {
+    it('tracks disabled agents', async () => {
       const advisor = new SwarmAdvisor(
         makeConfig({ agentPruning: true, warmupRounds: 0 }),
       )
@@ -416,7 +419,7 @@ describe('SwarmAdvisor', () => {
         },
       })
 
-      advisor.evaluateRound(
+      await advisor.evaluateRound(
         [makeVoteSignal('a1', 'p1', 'agree')],
         3,
         mathBridge,
@@ -430,7 +433,7 @@ describe('SwarmAdvisor', () => {
   })
 
   describe('reset', () => {
-    it('clears all state', () => {
+    it('clears all state', async () => {
       const provider = makeWeightProvider({ a1: 0.8 })
       const advisor = new SwarmAdvisor(
         makeConfig({ agentPruning: true, warmupRounds: 0, weightProvider: provider }),
@@ -444,7 +447,7 @@ describe('SwarmAdvisor', () => {
         },
       })
 
-      advisor.evaluateRound([makeVoteSignal('a1', 'p1', 'agree')], 3, mathBridge, ['a1', 'a3'])
+      await advisor.evaluateRound([makeVoteSignal('a1', 'p1', 'agree')], 3, mathBridge, ['a1', 'a3'])
       advisor.applyReputationWeights([makeVoteRecord('a1', 'p1', 'agree')])
 
       // State should be non-empty

@@ -1,6 +1,7 @@
 import type { Signal, SwarmBanditStorage } from '@cognitive-swarm/core'
 import type { SwarmAgent } from '@cognitive-swarm/agent'
 import type { ContributionTracker } from './contribution-tracker.js'
+import type { PredictionEngine } from './prediction-engine.js'
 
 /** Configuration for selective agent activation. */
 export interface AgentSelectionConfig {
@@ -8,12 +9,14 @@ export interface AgentSelectionConfig {
   readonly topK?: number
   /** Min score spread to trigger selection. Below this, all agents activate. */
   readonly minSpread?: number
-  /** Weight for bandit score component (0-1, default 0.4). */
+  /** Weight for bandit score component (0-1, default 0.35). */
   readonly banditWeight?: number
-  /** Weight for contribution score component (0-1, default 0.4). */
+  /** Weight for contribution score component (0-1, default 0.35). */
   readonly contributionWeight?: number
-  /** Weight for signal-type matching component (0-1, default 0.2). */
+  /** Weight for signal-type matching component (0-1, default 0.15). */
   readonly matchWeight?: number
+  /** Weight for prediction surprise component (0-1, default 0.15). */
+  readonly predictionWeight?: number
 }
 
 interface ResolvedSelectionConfig {
@@ -22,15 +25,17 @@ interface ResolvedSelectionConfig {
   readonly banditWeight: number
   readonly contributionWeight: number
   readonly matchWeight: number
+  readonly predictionWeight: number
 }
 
 /**
  * Selects which agents should activate for a given signal.
  *
- * Uses three scoring components:
+ * Uses four scoring components:
  * 1. Bandit score — historical success (mu mean from Thompson Bandit)
  * 2. Contribution score — recent usefulness (agree ratio from ContributionTracker)
  * 3. Match score — does the agent listen to this signal type?
+ * 4. Prediction score — surprise from PredictionEngine (surprised agents get priority)
  *
  * When scores are too close (spread < minSpread), activates all agents
  * (exploration mode / cold start).
@@ -38,15 +43,22 @@ interface ResolvedSelectionConfig {
 export class AgentSelector {
   private readonly config: ResolvedSelectionConfig
   private readonly banditScoreCache = new Map<string, number>()
+  private predictionEngine: PredictionEngine | null = null
 
   constructor(config?: AgentSelectionConfig) {
     this.config = {
       topK: config?.topK ?? Infinity,
       minSpread: config?.minSpread ?? 0.15,
-      banditWeight: config?.banditWeight ?? 0.4,
-      contributionWeight: config?.contributionWeight ?? 0.4,
-      matchWeight: config?.matchWeight ?? 0.2,
+      banditWeight: config?.banditWeight ?? 0.35,
+      contributionWeight: config?.contributionWeight ?? 0.35,
+      matchWeight: config?.matchWeight ?? 0.15,
+      predictionWeight: config?.predictionWeight ?? 0.15,
     }
+  }
+
+  /** Set the prediction engine for surprise-based scoring. */
+  setPredictionEngine(engine: PredictionEngine): void {
+    this.predictionEngine = engine
   }
 
   /**
@@ -111,11 +123,15 @@ export class AgentSelector {
     const banditScore = this.getBanditScore(agent.id)
     const contribScore = this.getContributionScore(agent.id, contributionTracker)
     const matchScore = agent.listens.includes(signal.type) ? 1.0 : 0.0
+    const predictionScore = this.predictionEngine
+      ? this.predictionEngine.getPredictionPriority(agent.id)
+      : 0.5
 
     return (
       banditScore * this.config.banditWeight +
       contribScore * this.config.contributionWeight +
-      matchScore * this.config.matchWeight
+      matchScore * this.config.matchWeight +
+      predictionScore * this.config.predictionWeight
     )
   }
 

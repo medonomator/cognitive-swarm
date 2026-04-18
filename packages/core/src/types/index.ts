@@ -1,4 +1,5 @@
 export type {
+  CausalLevel,
   SignalType,
   SignalPayloadMap,
   Signal,
@@ -64,6 +65,8 @@ export type {
   AgentErrorEvent,
   ConsensusFailedEvent,
   ToolCalledEvent,
+  EvolutionSpawnedEvent,
+  EvolutionDissolvedEvent,
 } from './events.js'
 
 export type {
@@ -96,6 +99,16 @@ export type {
   SwarmCost,
   SwarmTiming,
   SwarmEvent,
+  OutcomeVerdict,
+  OutcomeRecord,
+  CalibrationPoint,
+  EvaluationReport,
+  OutcomeEvaluator,
+  EvolutionConfig,
+  ResolvedEvolutionConfig,
+  EvolutionSpawnEntry,
+  EvolutionDissolveEntry,
+  EvolutionReport,
 } from './orchestrator.js'
 
 export type {

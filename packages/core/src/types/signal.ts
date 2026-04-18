@@ -1,3 +1,6 @@
+/** Causal reasoning level (Pearl's Ladder of Causation). */
+export type CausalLevel = 'correlation' | 'intervention' | 'counterfactual'
+
 /** All signal types in the swarm. */
 export type SignalType =
   | 'task:new'
@@ -43,6 +46,8 @@ export interface Signal<T extends SignalType = SignalType> {
 export interface SignalMetadata {
   readonly round?: number
   readonly priority?: number
+  /** Pearl's Ladder: correlation (L1) < intervention (L2) < counterfactual (L3). */
+  readonly causalLevel?: CausalLevel
 }
 
 export interface TaskPayload {

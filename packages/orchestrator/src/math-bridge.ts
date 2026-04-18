@@ -22,6 +22,14 @@ import {
   FisherTracker,
   BeliefDistanceTracker,
   PhaseTransitionDetector,
+  KLDivergenceTracker,
+  ChaosDetector,
+  LyapunovStability,
+  DampingClassifier,
+  ArchetypeDetector,
+  SVDAnalyzer,
+  ProposalEnergyTracker,
+  ProjectionConsensus,
 } from '@cognitive-swarm/math'
 
 // Feeds signal data into all math modules each round.
@@ -73,6 +81,14 @@ export class MathBridge {
   private readonly fisher = new FisherTracker()
   private readonly beliefDistance = new BeliefDistanceTracker()
   private readonly phaseDetector = new PhaseTransitionDetector()
+  private readonly klTracker = new KLDivergenceTracker()
+  private readonly chaosDetector = new ChaosDetector()
+  private readonly lyapunovStability = new LyapunovStability()
+  private readonly dampingClassifier = new DampingClassifier()
+  private readonly archetypeDetector = new ArchetypeDetector()
+  private readonly svdAnalyzer = new SVDAnalyzer()
+  private readonly proposalEnergy = new ProposalEnergyTracker()
+  private readonly projectionConsensus = new ProjectionConsensus()
   private readonly config: ResolvedMathConfig
   private beliefNetwork: BeliefNetwork | null = null
   private replicatorDynamics: ReplicatorDynamics | null = null
@@ -86,6 +102,9 @@ export class MathBridge {
   private challengeCount = 0
   private agentCount = 0
   private _roundNumber = 0
+  /** Previous round's distribution — used for surprise measurement when no belief network. */
+  private previousDistribution: Map<string, number> | null = null
+  private prevRoundSignalVolume = 0
 
   constructor(config: ResolvedMathConfig) {
     this.config = config
@@ -147,10 +166,43 @@ export class MathBridge {
 
     this.updateBeliefs(allProposals, allVotes)
 
-    // Measure Bayesian Surprise: KL(posterior || prior) per vote source
+    // ── Build current distribution from best available source ──
+    // Priority: belief network posteriors > raw proposals > discovery signals.
+    // This distribution feeds entropy, surprise, free energy, fisher, and phase detection.
+    let currentDist: Map<string, number> | null = null
+
+    if (this.beliefNetwork !== null) {
+      currentDist = new Map(this.beliefNetwork.getState().posteriors)
+    } else if (allProposals.length > 0) {
+      currentDist = new Map<string, number>()
+      for (const p of allProposals) {
+        const key = extractProposalId(p)
+        currentDist.set(key, (currentDist.get(key) ?? 0) + p.confidence)
+      }
+    } else {
+      // Discovery-based distribution: agent confidence as proxy beliefs.
+      // Common in observer/analysis mode where agents emit discoveries, not proposals.
+      const informativeSignals = newSignals.filter(
+        (s) => s.type === 'discovery' || s.type === 'challenge' || s.type === 'doubt',
+      )
+      if (informativeSignals.length > 0) {
+        currentDist = new Map<string, number>()
+        for (const d of informativeSignals) {
+          currentDist.set(d.source, (currentDist.get(d.source) ?? 0) + d.confidence)
+        }
+      }
+    }
+
+    // Set entropy from current distribution
+    if (currentDist !== null) {
+      this.entropy.setDistribution(currentDist)
+    }
+
+    // ── Surprise: measure KL(posterior || prior) for contributing agents ──
+    // Works with ANY distribution source, not just belief network + votes.
     if (this.beliefNetwork !== null && priorSnapshot !== null) {
+      // Best case: real Bayesian posteriors — measure per-agent surprise from votes
       const posteriorSnapshot = this.beliefNetwork.getState().posteriors
-      // Group votes by source agent to measure per-agent surprise
       const votesBySource = new Map<string, boolean>()
       for (const signal of newSignals) {
         if (isVotePayload(signal.payload)) {
@@ -160,50 +212,47 @@ export class MathBridge {
       for (const agentId of votesBySource.keys()) {
         this.surprise.measure(agentId, priorSnapshot, posteriorSnapshot)
       }
+    } else if (currentDist !== null && this.previousDistribution !== null) {
+      // Fallback: measure surprise from distribution shift (discovery-based).
+      // Each agent that contributed a signal this round gets a surprise measurement.
+      const contributors = new Set<string>()
+      for (const signal of newSignals) {
+        if (signal.source !== 'orchestrator' && signal.source !== 'memory') {
+          contributors.add(signal.source)
+        }
+      }
+      if (contributors.size > 0) {
+        for (const agentId of contributors) {
+          this.surprise.measure(agentId, this.previousDistribution, currentDist)
+        }
+      }
     }
 
-    // Use Bayesian posteriors for entropy instead of raw confidence
-    if (this.beliefNetwork !== null) {
-      const state = this.beliefNetwork.getState()
-      this.entropy.setDistribution(state.posteriors)
-    } else if (allProposals.length > 0) {
-      // Fallback: raw proposal confidences
-      const dist = new Map<string, number>()
-      for (const p of allProposals) {
-        const key = extractProposalId(p)
-        dist.set(key, (dist.get(key) ?? 0) + p.confidence)
-      }
-      this.entropy.setDistribution(dist)
-    } else {
-      // Last resort: build distribution from discovery signals by source agent.
-      // This ensures info-gain is computed even when agents only emit discoveries
-      // (common in observer/analysis use cases with no proposal voting).
-      const discoveries = newSignals.filter(
-        (s) => s.type === 'discovery' || s.type === 'challenge' || s.type === 'doubt',
-      )
-      if (discoveries.length > 0) {
-        const dist = new Map<string, number>()
-        for (const d of discoveries) {
-          dist.set(d.source, (dist.get(d.source) ?? 0) + d.confidence)
-        }
-        this.entropy.setDistribution(dist)
-      }
+    // Save distribution for next round's surprise comparison
+    if (currentDist !== null) {
+      this.previousDistribution = new Map(currentDist)
     }
 
     this._roundNumber++
 
     // Finalize surprise measurements for this round
-    // Capture per-signal surprise values before endRound() clears them
     const surpriseReport = this.surprise.endRound()
     const roundSurpriseValues = surpriseReport.measurements.map((m) => m.surprise)
 
     // ── Pipeline: surprise → free energy → fisher → belief distance ──
+    // Feed ALL downstream modules from the best available distribution.
 
-    if (this.beliefNetwork !== null) {
-      const posteriors = this.beliefNetwork.getState().posteriors
-      const mapProb = this.beliefNetwork.mapEstimate().probability
+    const posteriors = this.beliefNetwork !== null
+      ? this.beliefNetwork.getState().posteriors
+      : currentDist
 
-      // Set uniform prior on first round (before any updates shifted it)
+    if (posteriors !== null && posteriors.size > 0) {
+      const mapEntry = [...posteriors.entries()].reduce((best, entry) =>
+        entry[1] > best[1] ? entry : best,
+      )
+      const mapProb = mapEntry[1]
+
+      // Set uniform prior on first round
       if (this._roundNumber === 1) {
         const uniform = new Map<string, number>()
         for (const key of posteriors.keys()) {
@@ -213,7 +262,6 @@ export class MathBridge {
       }
 
       // Free Energy: F = λ·KL(posterior || prior) - log(accuracy)
-      // accuracy = MAP estimate probability (how well best hypothesis explains task)
       this.freeEnergy.observeRound(posteriors, mapProb)
 
       // Phase Transition: order parameter (MAP prob) + per-signal surprise values
@@ -222,31 +270,52 @@ export class MathBridge {
       // Fisher: track posterior evolution for Cramér-Rao efficiency
       this.fisher.observeRound(posteriors)
 
-      // Belief Distance: track per-agent beliefs for Wasserstein clustering
-      // Feed each agent's individual vote stance as a belief proxy
-      for (const signal of newSignals) {
-        if (isVotePayload(signal.payload)) {
-          const agentBelief = new Map(posteriors)
-          // Weight the voted proposal higher for this agent
-          const voted = signal.payload.proposalId
-          if (agentBelief.has(voted)) {
-            const weight = signal.payload.stance === 'agree'
-              ? signal.confidence
-              : 1 - signal.confidence
-            const adjusted = new Map<string, number>()
-            let total = 0
-            for (const [id, prob] of agentBelief) {
-              const adj = id === voted
-                ? prob * (1 + weight)
-                : prob * (1 - weight * 0.2)
-              adjusted.set(id, Math.max(adj, 1e-10))
-              total += Math.max(adj, 1e-10)
+      // Belief Distance: per-agent belief proxies
+      if (this.beliefNetwork !== null) {
+        // With belief network: weight voted proposals per agent
+        for (const signal of newSignals) {
+          if (isVotePayload(signal.payload)) {
+            const agentBelief = new Map(posteriors)
+            const voted = signal.payload.proposalId
+            if (agentBelief.has(voted)) {
+              const weight = signal.payload.stance === 'agree'
+                ? signal.confidence
+                : 1 - signal.confidence
+              const adjusted = new Map<string, number>()
+              let total = 0
+              for (const [id, prob] of agentBelief) {
+                const adj = id === voted
+                  ? prob * (1 + weight)
+                  : prob * (1 - weight * 0.2)
+                adjusted.set(id, Math.max(adj, 1e-10))
+                total += Math.max(adj, 1e-10)
+              }
+              for (const [id, val] of adjusted) {
+                adjusted.set(id, val / total)
+              }
+              this.beliefDistance.setBeliefs(signal.source, adjusted)
+            }
+          }
+        }
+      } else {
+        // Without belief network: each agent's signal confidence as belief proxy
+        for (const signal of newSignals) {
+          if (signal.source !== 'orchestrator' && signal.source !== 'memory') {
+            const agentBelief = new Map<string, number>()
+            // Agent's own confidence as a belief weight on their source key
+            for (const [key, val] of posteriors) {
+              agentBelief.set(key, key === signal.source
+                ? val * (1 + signal.confidence)
+                : val)
             }
             // Renormalize
-            for (const [id, val] of adjusted) {
-              adjusted.set(id, val / total)
+            const total = [...agentBelief.values()].reduce((a, b) => a + b, 0)
+            if (total > 0) {
+              for (const [key, val] of agentBelief) {
+                agentBelief.set(key, val / total)
+              }
             }
-            this.beliefDistance.setBeliefs(signal.source, adjusted)
+            this.beliefDistance.setBeliefs(signal.source, agentBelief)
           }
         }
       }
@@ -283,6 +352,130 @@ export class MathBridge {
       }
     }
 
+    // ── KL Divergence: per-agent divergence from consensus ──
+    if (posteriors !== null && posteriors.size > 0) {
+      this.klTracker.setConsensus(posteriors)
+      // Feed agent beliefs from beliefDistance tracker (already computed above)
+      for (const signal of newSignals) {
+        if (signal.source !== 'orchestrator' && signal.source !== 'memory') {
+          const agentBelief = new Map<string, number>()
+          if (this.beliefNetwork !== null && isVotePayload(signal.payload)) {
+            // Use vote-weighted beliefs
+            for (const [id, prob] of posteriors) {
+              const adj = id === signal.payload.proposalId
+                ? prob * (1 + (signal.payload.stance === 'agree' ? signal.confidence : -signal.confidence * 0.3))
+                : prob
+              agentBelief.set(id, Math.max(adj, 1e-10))
+            }
+          } else {
+            // Use signal confidence as proxy
+            for (const [key, val] of posteriors) {
+              agentBelief.set(key, key === signal.source ? val * (1 + signal.confidence) : val)
+            }
+          }
+          // Renormalize
+          const total = [...agentBelief.values()].reduce((a, b) => a + b, 0)
+          if (total > 0) {
+            for (const [key, val] of agentBelief) agentBelief.set(key, val / total)
+          }
+          this.klTracker.setBeliefs(signal.source, agentBelief)
+        }
+      }
+      this.klTracker.endRound()
+    }
+
+    // ── Chaos Detection: track which proposal leads each round ──
+    if (this.beliefNetwork !== null) {
+      const map = this.beliefNetwork.mapEstimate()
+      if (map.hypothesisId !== '') {
+        this.chaosDetector.observeWinner(map.hypothesisId, map.probability)
+      }
+    }
+
+    // ── Lyapunov Stability: agent belief dispersion around consensus ──
+    if (posteriors !== null && posteriors.size > 0 && this.agentSignalCounts.size >= 2) {
+      const mapEntry = [...posteriors.entries()].reduce((best, entry) =>
+        entry[1] > best[1] ? entry : best,
+      )
+      const consensusProb = mapEntry[1]
+
+      // Build per-agent confidence in leading proposal
+      const agentConfidences = new Map<string, number>()
+      for (const signal of newSignals) {
+        if (signal.source !== 'orchestrator' && signal.source !== 'memory') {
+          // Agent's effective confidence in the MAP proposal
+          if (isVotePayload(signal.payload) && signal.payload.proposalId === mapEntry[0]) {
+            const effective = signal.payload.stance === 'agree'
+              ? signal.confidence
+              : 1 - signal.confidence
+            agentConfidences.set(signal.source, effective)
+          } else if (!agentConfidences.has(signal.source)) {
+            agentConfidences.set(signal.source, signal.confidence * 0.5)
+          }
+        }
+      }
+
+      if (agentConfidences.size >= 2) {
+        this.lyapunovStability.observe(agentConfidences, consensusProb)
+      }
+    }
+
+    // ── Damping Classifier: track entropy convergence regime ──
+    if (this.entropy.roundCount >= 1) {
+      const analysis = this.entropy.analyze()
+      this.dampingClassifier.observe(analysis.normalized)
+    }
+
+    // ── SVD Analyzer + Proposal Energy: track agent-proposal votes ──
+    for (const signal of newSignals) {
+      if (isVotePayload(signal.payload)) {
+        const strength = signal.payload.stance === 'agree'
+          ? signal.confidence
+          : -signal.confidence
+        this.svdAnalyzer.recordVote(signal.source, signal.payload.proposalId, strength)
+        this.proposalEnergy.recordVote(
+          signal.payload.proposalId,
+          signal.payload.stance === 'agree' ? 'agree' : 'disagree',
+          signal.confidence,
+        )
+      }
+    }
+    if (allVotes.length > 0) {
+      this.proposalEnergy.endRound()
+    }
+
+    // ── Projection Consensus: weighted consensus from per-agent beliefs ──
+    if (posteriors !== null && posteriors.size > 0) {
+      this.projectionConsensus.reset()
+      for (const signal of newSignals) {
+        if (signal.source !== 'orchestrator' && signal.source !== 'memory') {
+          // Build per-agent adjusted beliefs (same logic as beliefDistance)
+          const agentBelief = new Map<string, number>()
+          if (this.beliefNetwork !== null && isVotePayload(signal.payload)) {
+            for (const [id, prob] of posteriors) {
+              const weight = signal.payload.proposalId === id
+                ? (signal.payload.stance === 'agree' ? signal.confidence : 1 - signal.confidence)
+                : prob
+              agentBelief.set(id, Math.max(weight, 1e-10))
+            }
+          } else {
+            for (const [key, val] of posteriors) {
+              agentBelief.set(key, key === signal.source
+                ? val * (1 + signal.confidence)
+                : val)
+            }
+          }
+          // Renormalize
+          let total = 0
+          for (const v of agentBelief.values()) total += v
+          if (total > 0) {
+            for (const [k, v] of agentBelief) agentBelief.set(k, v / total)
+          }
+          this.projectionConsensus.setBeliefs(signal.source, agentBelief, signal.confidence)
+        }
+      }
+    }
+
     this.updateReplicator(newSignals)
 
     if (this.optimalStopping !== null) {
@@ -293,6 +486,11 @@ export class MathBridge {
         bestProposalQuality: mapProb,
         round: this._roundNumber,
       })
+    }
+
+    // ── System Archetypes: feed after all other analyzers ──
+    if (this._roundNumber >= 2) {
+      this.feedArchetypeDetector()
     }
   }
 
@@ -305,6 +503,32 @@ export class MathBridge {
    *   3. Fallbacks — entropy, info gain, cycles, CUSUM, surprise, fragmentation
    */
   shouldStop(): boolean {
+    // ── ALGEDONIC CHANNEL (VSM System 3*): Emergency bypass ──
+    // Fires when multiple critical signals align — don't wait for normal criteria.
+    // Beer's algedonic channel: pain/pleasure signals that bypass normal management.
+    if (this._roundNumber >= 4) {
+      let alarmCount = 0
+      if (this.chaosDetector.roundCount >= 6) {
+        const chaos = this.chaosDetector.report()
+        if (chaos.chaosRisk === 'critical' || chaos.chaosRisk === 'high') alarmCount++
+      }
+      if (this.lyapunovStability.roundCount >= 2) {
+        const lyap = this.lyapunovStability.report(
+          this.beliefNetwork?.mapEstimate().probability ?? 0.5,
+        )
+        if (lyap.type === 'unstable') alarmCount++
+      }
+      if (this.dampingClassifier.roundCount >= 4) {
+        const damp = this.dampingClassifier.report()
+        if (damp.regime === 'overdamped' && damp.dampingRatio > 3.0) alarmCount++
+      }
+      // Algedonic: 2+ concurrent critical signals = emergency stop
+      if (alarmCount >= 2) {
+        this.stoppingReason = 'algedonic-emergency'
+        return true
+      }
+    }
+
     // ── PRIMARY: Free Energy convergence ──
     // F encapsulates entropy + surprise + accuracy into one scalar.
     // When |ΔF| < ε for N consecutive rounds, the swarm has learned
@@ -324,6 +548,19 @@ export class MathBridge {
       if (fisherReport.learningStalled) {
         this.stoppingReason = 'learning-stalled'
         return true
+      }
+    }
+
+    // ── PHASE TRANSITION GUARD ──
+    // Near criticality is the most productive phase of debate — suppress
+    // fallback stopping criteria to let the swarm explore the edge.
+    // Critical phase has maximum susceptibility = maximum sensitivity to new info.
+    if (this.phaseDetector.roundCount >= 3) {
+      const phase = this.phaseDetector.detect()
+      if (phase.phase === 'critical' && phase.criticalityScore > 0.7) {
+        // Don't stop — the swarm is at its most sensitive point.
+        // Only primary (free energy) and algedonic can override this.
+        return false
       }
     }
 
@@ -378,6 +615,15 @@ export class MathBridge {
       const report = this.surprise.roundReport()
       if (report.surpriseCollapse) {
         this.stoppingReason = 'surprise-collapsed'
+        return true
+      }
+    }
+
+    // Chaos detection — critical chaos = force stop
+    if (this.chaosDetector.roundCount >= 6) {
+      const chaosReport = this.chaosDetector.report()
+      if (chaosReport.chaosRisk === 'critical') {
+        this.stoppingReason = 'chaos-critical'
         return true
       }
     }
@@ -452,6 +698,14 @@ export class MathBridge {
       fisher: this.buildFisherAnalysis(),
       beliefDistance: this.buildBeliefDistanceAnalysis(),
       phaseTransition: this.buildPhaseTransitionAnalysis(),
+      klDivergence: this.buildKLDivergenceAnalysis(),
+      chaos: this.buildChaosAnalysis(),
+      lyapunovStability: this.buildLyapunovAnalysis(),
+      damping: this.buildDampingAnalysis(),
+      archetypes: this.buildArchetypeAnalysis(),
+      svd: this.buildSVDAnalysis(),
+      proposalEnergy: this.buildProposalEnergyAnalysis(),
+      projectionConsensus: this.buildProjectionConsensusAnalysis(),
       stoppingReason: this.stoppingReason,
     }
   }
@@ -468,6 +722,14 @@ export class MathBridge {
     this.fisher.reset()
     this.beliefDistance.reset()
     this.phaseDetector.reset()
+    this.klTracker.reset()
+    this.chaosDetector.reset()
+    this.lyapunovStability.reset()
+    this.dampingClassifier.reset()
+    this.archetypeDetector.reset()
+    this.svdAnalyzer.reset()
+    this.proposalEnergy.reset()
+    this.projectionConsensus.reset()
     this.replicatorDynamics = null
     this.optimalStopping?.reset()
     this.beliefNetwork = null
@@ -479,6 +741,8 @@ export class MathBridge {
     this.lastSignalType = null
     this.challengeCount = 0
     this._roundNumber = 0
+    this.previousDistribution = null
+    this.prevRoundSignalVolume = 0
   }
 
   private updateBeliefs(
@@ -764,6 +1028,171 @@ export class MathBridge {
       optimalConsensus,
       meanDistance,
     }
+  }
+
+  private buildKLDivergenceAnalysis(): MathAnalysis['klDivergence'] {
+    if (this.klTracker.agentCount < 2) return null
+
+    const report = this.klTracker.report()
+    return {
+      meanDivergence: report.meanDivergence,
+      outliers: [...report.outliers],
+      meanPairwiseJSD: report.meanPairwiseJSD,
+      consensusDrift: report.consensusDrift,
+      driftTrend: report.driftTrend,
+    }
+  }
+
+  private buildChaosAnalysis(): MathAnalysis['chaos'] {
+    if (this.chaosDetector.roundCount < 4) return null
+
+    const report = this.chaosDetector.report()
+    return {
+      period: report.period,
+      sharkovskiiTriggered: report.sharkovskiiTriggered,
+      doublingDetected: report.doublingDetected,
+      lyapunovExponent: report.lyapunovExponent,
+      chaosRisk: report.chaosRisk,
+      recommendation: report.recommendation,
+      estimatedRoundsToChaos: report.estimatedRoundsToChaos,
+    }
+  }
+
+  private buildLyapunovAnalysis(): MathAnalysis['lyapunovStability'] {
+    if (this.lyapunovStability.roundCount < 2) return null
+
+    const mapProb = this.beliefNetwork?.mapEstimate().probability ?? 0.5
+    const report = this.lyapunovStability.report(mapProb)
+    return {
+      lyapunovV: report.lyapunovV,
+      lyapunovDot: report.lyapunovDot,
+      stable: report.stable,
+      type: report.type,
+      perturbationTolerance: report.perturbationTolerance,
+      adjustedConfidence: report.adjustedConfidence,
+      convergenceRate: report.convergenceRate,
+      routhHurwitz: report.routhHurwitz !== null
+        ? { signChanges: report.routhHurwitz.signChanges, stable: report.routhHurwitz.stable }
+        : null,
+    }
+  }
+
+  private buildDampingAnalysis(): MathAnalysis['damping'] {
+    if (this.dampingClassifier.roundCount < 4) return null
+
+    const report = this.dampingClassifier.report()
+    return {
+      dampingRatio: report.dampingRatio,
+      naturalFrequency: report.naturalFrequency,
+      regime: report.regime,
+      oscillationCount: report.oscillationCount,
+      settlingRounds: report.settlingRounds,
+      diagnostic: report.diagnostic,
+    }
+  }
+
+  private buildArchetypeAnalysis(): MathAnalysis['archetypes'] {
+    if (this.archetypeDetector.observationCount < 2) return null
+
+    const report = this.archetypeDetector.report()
+    return {
+      detected: report.detected.map(a => ({
+        name: a.name,
+        confidence: a.confidence,
+        description: a.description,
+        leveragePoint: a.leveragePoint,
+        leverageLevel: a.leverageLevel,
+      })),
+      hasArchetypes: report.hasArchetypes,
+      primaryName: report.primary?.name ?? null,
+      primaryConfidence: report.primary?.confidence ?? null,
+    }
+  }
+
+  private buildSVDAnalysis(): MathAnalysis['svd'] {
+    if (this.svdAnalyzer.agentCount < 2 || this.svdAnalyzer.proposalCount < 2) return null
+
+    const report = this.svdAnalyzer.report()
+    return {
+      singularValues: [...report.singularValues],
+      explainedVariance: [...report.explainedVariance],
+      effectiveRank: report.effectiveRank,
+      oneDimensional: report.oneDimensional,
+      diagnostic: report.diagnostic,
+    }
+  }
+
+  private buildProposalEnergyAnalysis(): MathAnalysis['proposalEnergy'] {
+    if (this.proposalEnergy.proposalCount < 1) return null
+
+    const report = this.proposalEnergy.report()
+    const trends: Record<string, 'rising' | 'stable' | 'declining'> = {}
+    for (const p of report.proposals) {
+      trends[p.proposalId] = p.trend
+    }
+    return {
+      leader: report.leader,
+      risingFastest: report.risingFastest,
+      totalEnergy: report.totalEnergy,
+      clearLeader: report.clearLeader,
+      trends,
+    }
+  }
+
+  private buildProjectionConsensusAnalysis(): MathAnalysis['projectionConsensus'] {
+    if (this.projectionConsensus.agentCount < 2) return null
+
+    const result = this.projectionConsensus.compute()
+    const consensus: Record<string, number> = {}
+    for (const [key, val] of result.consensus) {
+      consensus[key] = val
+    }
+    return {
+      consensus,
+      totalResidual: result.totalResidual,
+      meanResidual: result.meanResidual,
+      tight: result.tight,
+    }
+  }
+
+  /**
+   * Feed archetype detector with current metrics.
+   * Called internally after all other analyzers have updated.
+   */
+  private feedArchetypeDetector(): void {
+    const gain = this.entropy.informationGain()
+    const redundancyReport = this.redundancy.emissionCount >= 2
+      ? this.redundancy.analyze(this.config.redundancyThreshold)
+      : null
+    const avgNMI = redundancyReport !== null && redundancyReport.pairwise.length > 0
+      ? redundancyReport.pairwise.reduce((s, p) => s + p.normalized, 0) / redundancyReport.pairwise.length
+      : 0
+
+    // Shapley concentration: top contributor value / mean value
+    let shapleyConcentration = 1.0
+    if (this.agentSignalCounts.size >= 2) {
+      const counts = [...this.agentSignalCounts.values()]
+      const total = counts.reduce((a, b) => a + b, 0)
+      const mean = total / counts.length
+      const max = Math.max(...counts)
+      shapleyConcentration = mean > 0 ? max / mean : 1.0
+    }
+
+    const currentSignalVolume = [...this.agentSignalCounts.values()].reduce((a, b) => a + b, 0)
+
+    this.archetypeDetector.observe({
+      infoGainTrend: gain.relativeGain > 0 ? gain.gain : -Math.abs(gain.gain),
+      signalVolume: currentSignalVolume,
+      prevSignalVolume: this.prevRoundSignalVolume,
+      evolvedAgentCount: 0, // filled by orchestrator if evolution is active
+      totalSpawns: 0,
+      totalDissolves: 0,
+      averageNMI: avgNMI,
+      shapleyConcentration,
+      persistentGap: false,
+    })
+
+    this.prevRoundSignalVolume = currentSignalVolume
   }
 
   /**

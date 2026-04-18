@@ -1,6 +1,7 @@
 import type {
   Signal,
   SignalType,
+  CausalLevel,
   SwarmAgentConfig,
   ResolvedSwarmAgentConfig,
   AgentReaction,
@@ -20,6 +21,7 @@ import { defaultErrorHandler, uid } from '@cognitive-engine/core'
 import type { CognitiveOrchestrator } from '@cognitive-engine/orchestrator'
 import type { ThompsonBandit } from '@cognitive-engine/bandit'
 import { PersonalityFilter } from './personality-filter.js'
+import { BeliefModel } from './belief-model.js'
 
 const DEFAULT_WEIGHT = 1
 const DEFAULT_MAX_CONCURRENT = 1
@@ -78,6 +80,7 @@ export class SwarmAgent {
   private readonly orchestrator: CognitiveOrchestrator
   private readonly bandit: ThompsonBandit
   private readonly personalityFilter: PersonalityFilter
+  private readonly beliefModel: BeliefModel
   private readonly toolSupport: AgentToolSupport | null
   private activeTasks = 0
   /** Signals seen in previous rounds — provides cross-round context. */
@@ -97,6 +100,7 @@ export class SwarmAgent {
     this.personalityFilter = new PersonalityFilter(
       this.config.personality,
     )
+    this.beliefModel = new BeliefModel()
   }
 
   get id(): string {
@@ -144,8 +148,9 @@ export class SwarmAgent {
       const strategy = await this.selectStrategy(signal)
       const signals = await this.executeStrategy(signal, strategy)
 
-      // Record signal for cross-round context
+      // Record signal for cross-round context and Theory of Mind
       this.signalHistory.push(signal)
+      this.beliefModel.updateFromSignal(signal)
       if (this.signalHistory.length > SwarmAgent.MAX_HISTORY) {
         this.signalHistory.splice(0, this.signalHistory.length - SwarmAgent.MAX_HISTORY)
       }
@@ -269,18 +274,19 @@ export class SwarmAgent {
     const payloadStr = JSON.stringify(signal.payload, null, 2)
     const roleCtx = `You are "${this.config.name}" with role: ${this.config.role}.`
     const historyCtx = this.buildHistoryContext(signal)
+    const tomCtx = this.beliefModel.generateTheoryOfMindContext()
 
     switch (strategy) {
       case 'analyze':
-        return `${roleCtx}${historyCtx}\nAnalyze this ${signal.type} signal:\n${payloadStr}\nProvide your analysis and any findings.`
+        return `${roleCtx}${historyCtx}${tomCtx}\nAnalyze this ${signal.type} signal:\n${payloadStr}\nProvide your analysis and any findings.`
       case 'propose':
-        return `${roleCtx}${historyCtx}\nBased on this ${signal.type} signal:\n${payloadStr}\nPropose a solution or course of action.`
+        return `${roleCtx}${historyCtx}${tomCtx}\nBased on this ${signal.type} signal:\n${payloadStr}\nPropose a solution or course of action.`
       case 'challenge':
-        return `${roleCtx}${historyCtx}\nCritically examine this ${signal.type} signal:\n${payloadStr}\nIdentify weaknesses, risks, or alternative perspectives. Challenge assumptions and point out what others may have missed.`
+        return `${roleCtx}${historyCtx}${tomCtx}\nCritically examine this ${signal.type} signal:\n${payloadStr}\nIdentify weaknesses, risks, or alternative perspectives. Challenge assumptions and point out what others may have missed.`
       case 'support':
-        return `${roleCtx}${historyCtx}\nEvaluate this ${signal.type} signal:\n${payloadStr}\nProvide supporting evidence or vote on the proposal.`
+        return `${roleCtx}${historyCtx}${tomCtx}\nEvaluate this ${signal.type} signal:\n${payloadStr}\nProvide supporting evidence or vote on the proposal.`
       case 'synthesize':
-        return `${roleCtx}${historyCtx}\nSynthesize insights from this ${signal.type} signal:\n${payloadStr}\nCombine findings into a coherent proposal.`
+        return `${roleCtx}${historyCtx}${tomCtx}\nSynthesize insights from this ${signal.type} signal:\n${payloadStr}\nCombine findings into a coherent proposal.`
       case 'defer':
         return ''
     }
@@ -322,7 +328,7 @@ export class SwarmAgent {
     // challenge/doubt → discovery (reframe as critical finding)
     // vote → discovery (reframe as evaluation)
     if (emittableTypes.length === 0 && allowedOutputTypes.length > 0) {
-      const fallbackOrder: readonly SignalType[] = ['discovery', 'proposal', 'vote']
+      const fallbackOrder: readonly SignalType[] = ['discovery', 'challenge', 'doubt', 'proposal', 'vote']
       const fallback = fallbackOrder.find((t) => this.config.canEmit.includes(t))
       if (fallback) {
         emittableTypes = [fallback]
@@ -344,6 +350,8 @@ export class SwarmAgent {
       confidence,
     )
 
+    const causalLevel = inferCausalLevel(strategy, outputType)
+
     const outputSignal: Signal = {
       id: uid('sig'),
       type: outputType,
@@ -352,6 +360,7 @@ export class SwarmAgent {
       confidence,
       timestamp: Date.now(),
       replyTo: original.id,
+      metadata: { causalLevel },
     }
 
     return [outputSignal]
@@ -496,19 +505,12 @@ function formatToolResults(results: readonly AgentToolResult[]): string {
 
 /** Extract a short text summary from a signal payload for history context. */
 function summarizePayload(payload: Signal['payload']): string {
-  // payload is always an object (SignalPayloadMap union)
-  const p = payload as unknown as Record<string, unknown>
-
-  // Try common payload fields in priority order
-  const text =
-    (typeof p['finding'] === 'string' ? p['finding'] : null) ??
-    (typeof p['content'] === 'string' ? p['content'] : null) ??
-    (typeof p['counterArgument'] === 'string' ? p['counterArgument'] : null) ??
-    (typeof p['concern'] === 'string' ? p['concern'] : null) ??
-    (typeof p['task'] === 'string' ? p['task'] : null) ??
-    null
-
-  if (text) return text.slice(0, 150)
+  // Try known payload fields in priority order
+  if ('finding' in payload && typeof payload.finding === 'string') return payload.finding.slice(0, 150)
+  if ('content' in payload && typeof payload.content === 'string') return payload.content.slice(0, 150)
+  if ('counterArgument' in payload && typeof payload.counterArgument === 'string') return payload.counterArgument.slice(0, 150)
+  if ('concern' in payload && typeof payload.concern === 'string') return payload.concern.slice(0, 150)
+  if ('task' in payload && typeof payload.task === 'string') return payload.task.slice(0, 150)
   return JSON.stringify(payload).slice(0, 150)
 }
 
@@ -521,6 +523,23 @@ function summarizePayload(payload: Signal['payload']): string {
  *
  * Weight reflects how strongly the agent feels (distance from 0.5).
  */
+/**
+ * Infer causal reasoning level from strategy and output type.
+ * Pearl's Ladder: correlation (observations) < intervention (actions) < counterfactual (what-if).
+ */
+function inferCausalLevel(strategy: AgentStrategyId, outputType: SignalType): CausalLevel {
+  // Challenges and doubts involve counterfactual reasoning ("what if this is wrong?")
+  if (strategy === 'challenge' || outputType === 'challenge' || outputType === 'doubt') {
+    return 'counterfactual'
+  }
+  // Proposals and synthesis involve intervention ("if we do X, then Y")
+  if (strategy === 'propose' || strategy === 'synthesize' || outputType === 'proposal') {
+    return 'intervention'
+  }
+  // Analysis and support are observational ("we see X correlating with Y")
+  return 'correlation'
+}
+
 function buildVotePayload(
   original: Signal,
   confidence: number,

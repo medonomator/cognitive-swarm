@@ -138,6 +138,31 @@ export type {
   PhaseTransitionConfig,
 } from './phase-transition.js'
 
+// KL-Divergence Tracker (agent divergence from consensus)
+export { KLDivergenceTracker } from './kl-tracker.js'
+export type {
+  AgentDivergence,
+  AgentPairJSD,
+  KLDivergenceReport,
+} from './kl-tracker.js'
+
+// Chaos Detection (period analysis, Sharkovskii, Feigenbaum)
+export { ChaosDetector } from './chaos-detector.js'
+export type {
+  ChaosRisk,
+  ChaosRecommendation,
+  ChaosReport,
+} from './chaos-detector.js'
+
+// Lyapunov Stability (consensus stability analysis)
+export { LyapunovStability } from './lyapunov-stability.js'
+export type {
+  StabilityType,
+  LyapunovReport,
+  LyapunovConfig,
+  RouthHurwitzResult,
+} from './lyapunov-stability.js'
+
 // Optimal Transport (Wasserstein distance & barycenters)
 export {
   wasserstein1,
@@ -150,3 +175,50 @@ export type {
   BarycenterResult,
   BeliefDistance,
 } from './optimal-transport.js'
+
+// Damped Oscillation Classification (convergence regime)
+export { DampingClassifier } from './damping-classifier.js'
+export type {
+  DampingConfig,
+  DampingRegime,
+  DampingReport,
+} from './damping-classifier.js'
+
+// System Archetypes (structural pathological patterns)
+export { ArchetypeDetector } from './system-archetypes.js'
+export type {
+  ArchetypeConfig,
+  DetectedArchetype,
+  ArchetypeMetrics,
+  ArchetypeReport,
+} from './system-archetypes.js'
+
+// SVD Analyzer (agent-proposal matrix decomposition)
+export { SVDAnalyzer } from './svd-analyzer.js'
+export type {
+  SVDReport,
+} from './svd-analyzer.js'
+
+// Proposal Energy (stocks & flows model)
+export { ProposalEnergyTracker } from './proposal-energy.js'
+export type {
+  ProposalEnergy,
+  ProposalEnergyReport,
+} from './proposal-energy.js'
+
+// Projection Consensus (weighted least-squares)
+export { ProjectionConsensus } from './projection-consensus.js'
+export type {
+  ProjectionResult,
+} from './projection-consensus.js'
+
+// Leverage Points (Meadows' systemic intervention ranking)
+export {
+  classifyLeverage,
+  rankByLeverage,
+  leverageCategoryName,
+} from './leverage-points.js'
+export type {
+  LeverageLevel,
+  LeverageIntervention,
+} from './leverage-points.js'

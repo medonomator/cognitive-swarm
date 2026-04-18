@@ -17,7 +17,8 @@ import type {
   AgentReaction,
   SwarmControlSignals,
 } from '@cognitive-swarm/core'
-import type { TypedEventEmitter } from '@cognitive-swarm/core'
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+import { TypedEventEmitter } from '@cognitive-swarm/core'
 import type { ErrorHandler, EngineConfig } from '@cognitive-engine/core'
 import { defaultErrorHandler, uid } from '@cognitive-engine/core'
 import { CognitiveOrchestrator } from '@cognitive-engine/orchestrator'

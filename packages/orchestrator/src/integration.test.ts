@@ -114,7 +114,7 @@ function makeMockContributionTracker(): ContributionTracker {
 
 describe('Integration: Advisor + Topology + Debate', () => {
   describe('Advisor with topology feedback loop', () => {
-    it('produces topology update advice when influence is concentrated', () => {
+    it('produces topology update advice when influence is concentrated', async () => {
       const config: ResolvedSwarmAdvisorConfig = {
         groupthinkCorrection: true,
         agentPruning: false,
@@ -128,6 +128,8 @@ describe('Integration: Advisor + Topology + Debate', () => {
           pruneRedundantLinks: true,
           protectBridgingAgents: true,
         },
+        metaAgentLlm: null,
+        metaAgentInterval: 3,
       }
 
       const events = new TypedEventEmitter<SwarmEventMap>()
@@ -139,7 +141,7 @@ describe('Integration: Advisor + Topology + Debate', () => {
       const signals1 = [makeSignal('s1', 'discovery', 'agent-1', {
         finding: 'test', relevance: 0.8,
       })]
-      const advice1 = advisor.evaluateRound(signals1, 1, mathBridge1, agents)
+      const advice1 = await advisor.evaluateRound(signals1, 1, mathBridge1, agents)
       expect(advice1).toHaveLength(0)
 
       // Round 2: concentrated influence -> topology update
@@ -155,7 +157,7 @@ describe('Integration: Advisor + Topology + Debate', () => {
       const signals2 = [makeSignal('s2', 'discovery', 'agent-2', {
         finding: 'another', relevance: 0.7,
       })]
-      const advice2 = advisor.evaluateRound(signals2, 2, mathBridge2, agents)
+      const advice2 = await advisor.evaluateRound(signals2, 2, mathBridge2, agents)
 
       const topologyAdvice = advice2.find((a) => a.type === 'update-topology')
       expect(topologyAdvice).toBeDefined()
@@ -171,7 +173,7 @@ describe('Integration: Advisor + Topology + Debate', () => {
       expect(neighbors2!.has('agent-1')).toBe(false)
     })
 
-    it('includes topology info in advisor report', () => {
+    it('includes topology info in advisor report', async () => {
       const config: ResolvedSwarmAdvisorConfig = {
         groupthinkCorrection: false,
         agentPruning: false,
@@ -185,6 +187,8 @@ describe('Integration: Advisor + Topology + Debate', () => {
           pruneRedundantLinks: true,
           protectBridgingAgents: true,
         },
+        metaAgentLlm: null,
+        metaAgentInterval: 3,
       }
 
       const advisor = new SwarmAdvisor(config)
@@ -200,7 +204,7 @@ describe('Integration: Advisor + Topology + Debate', () => {
         },
       }])
 
-      advisor.evaluateRound(
+      await advisor.evaluateRound(
         [makeSignal('s1', 'discovery', 'a', { finding: 'x', relevance: 0.5 })],
         1,
         mathBridge,
@@ -213,7 +217,7 @@ describe('Integration: Advisor + Topology + Debate', () => {
       expect(report.finalTopology!.size).toBe(4)
     })
 
-    it('does not re-emit topology advice when topology unchanged', () => {
+    it('does not re-emit topology advice when topology unchanged', async () => {
       const config: ResolvedSwarmAdvisorConfig = {
         groupthinkCorrection: false,
         agentPruning: false,
@@ -227,6 +231,8 @@ describe('Integration: Advisor + Topology + Debate', () => {
           pruneRedundantLinks: true,
           protectBridgingAgents: true,
         },
+        metaAgentLlm: null,
+        metaAgentInterval: 3,
       }
 
       const advisor = new SwarmAdvisor(config)
@@ -244,7 +250,7 @@ describe('Integration: Advisor + Topology + Debate', () => {
 
       // Round 1: topology changes
       const mb1 = makeMathBridge([analysis])
-      const advice1 = advisor.evaluateRound(
+      const advice1 = await advisor.evaluateRound(
         [makeSignal('s1', 'discovery', 'a', { finding: 'x', relevance: 0.5 })],
         1, mb1, agents,
       )
@@ -252,7 +258,7 @@ describe('Integration: Advisor + Topology + Debate', () => {
 
       // Round 2: same analysis -> no change -> no advice
       const mb2 = makeMathBridge([analysis])
-      const advice2 = advisor.evaluateRound(
+      const advice2 = await advisor.evaluateRound(
         [makeSignal('s2', 'discovery', 'b', { finding: 'y', relevance: 0.5 })],
         2, mb2, agents,
       )

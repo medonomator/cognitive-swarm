@@ -1,0 +1,42 @@
+{
+  "name": "@cognitive-swarm/tools-web-fetch",
+  "version": "0.1.0",
+  "description": "Web fetch & scrape MCP server for cognitive-swarm agents — read URLs, extract structured content",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "cs-web-fetch": "./dist/server.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "https-proxy-agent": "^7.0.0"
+  },
+  "license": "Apache-2.0",
+  "author": "Dmitry Zorin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/medonomator/cognitive-swarm.git",
+    "directory": "packages/tools-web-fetch"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

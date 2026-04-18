@@ -1,5 +1,6 @@
 // Types
 export type {
+  CausalLevel,
   SignalType,
   SignalPayloadMap,
   Signal,
@@ -53,6 +54,8 @@ export type {
   AgentErrorEvent,
   ConsensusFailedEvent,
   ToolCalledEvent,
+  EvolutionSpawnedEvent,
+  EvolutionDissolvedEvent,
   AgentWeightProvider,
   SwarmAdvisorConfig,
   ResolvedSwarmAdvisorConfig,
@@ -82,6 +85,16 @@ export type {
   SwarmCost,
   SwarmTiming,
   SwarmEvent,
+  OutcomeVerdict,
+  OutcomeRecord,
+  CalibrationPoint,
+  EvaluationReport,
+  OutcomeEvaluator,
+  EvolutionConfig,
+  ResolvedEvolutionConfig,
+  EvolutionSpawnEntry,
+  EvolutionDissolveEntry,
+  EvolutionReport,
   VectorMemoryEntry,
   VectorMemory,
 } from './types/index.js'

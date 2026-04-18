@@ -101,7 +101,7 @@ FORMAT: Each finding must be 1-3 sentences. Structure: "Symptom → Root cause �
 GOOD: "Spent 40 min debugging hook — missing hookEventName field in output JSON. Claude Code requires it but it's undocumented. Prevention: always include hookEventName matching the hook event type."
 BAD: "### Analysis of Mistakes\n#### Bug 1: Missing field..."
 NO markdown, NO numbered analysis. Just mistake → cause → fix.`,
-        personality: { curiosity: 0.6, caution: 0.9, conformity: 0.1, verbosity: 0.5 },
+        personality: { curiosity: 0.8, caution: 0.5, conformity: 0.1, verbosity: 0.5 },
         listens: ['task:new', 'discovery', 'proposal', 'challenge'],
         canEmit: ['discovery', 'challenge', 'doubt'],
         weight: 1.4,

@@ -27,6 +27,7 @@
     "@cognitive-swarm/signals": "*",
     "@cognitive-swarm/agent": "*",
     "@cognitive-swarm/consensus": "*",
+    "@cognitive-swarm/evolution": "*",
     "@cognitive-swarm/introspection": "*",
     "@cognitive-swarm/reputation": "*",
     "@cognitive-engine/core": "*",
