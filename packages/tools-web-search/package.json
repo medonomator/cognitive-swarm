@@ -1,6 +1,6 @@
 {
   "name": "@cognitive-swarm/tools-web-search",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Web search MCP server for cognitive-swarm agents — Brave Search API",
   "type": "module",
   "main": "./dist/index.js",
