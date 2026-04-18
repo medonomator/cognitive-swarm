@@ -422,7 +422,7 @@ export class SwarmOrchestrator {
       agentContributions: this.contributionTracker.getContributions(),
       cost: {
         tokens: totalTokens,
-        estimatedUsd: totalTokens * COST_PER_TOKEN_USD,
+        estimatedUsd: totalTokens * this.config.costPerToken,
       },
       timing: {
         totalMs: Date.now() - startTime,
@@ -719,7 +719,7 @@ export class SwarmOrchestrator {
       agentContributions: this.contributionTracker.getContributions(),
       cost: {
         tokens: totalTokens,
-        estimatedUsd: totalTokens * COST_PER_TOKEN_USD,
+        estimatedUsd: totalTokens * this.config.costPerToken,
       },
       timing: {
         totalMs: Date.now() - startTime,
@@ -1041,7 +1041,7 @@ export class SwarmOrchestrator {
       agentContributions: this.contributionTracker.getContributions(),
       cost: {
         tokens: totalTokens,
-        estimatedUsd: totalTokens * COST_PER_TOKEN_USD,
+        estimatedUsd: totalTokens * this.config.costPerToken,
       },
       timing: {
         totalMs: Date.now() - startTime,
@@ -1602,5 +1602,6 @@ function resolveSwarmConfig(config: SwarmConfig): ResolvedSwarmConfig {
       cooldownRounds: config.evolution?.cooldownRounds ?? 3,
       nmiPruneThreshold: config.evolution?.nmiPruneThreshold ?? 0.8,
     },
+    costPerToken: config.costPerToken ?? COST_PER_TOKEN_USD,
   }
 }
