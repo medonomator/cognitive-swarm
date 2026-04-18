@@ -159,7 +159,7 @@ const result = await swarm.solve('Should we use microservices or a monolith?')
 console.log(result.answer)       // Synthesized answer from all agents
 console.log(result.confidence)   // 0.87
 console.log(result.consensus)    // Full voting record, dissent preserved
-console.log(result.cost)         // { tokens: 4200, estimatedUsd: 0.006 }
+console.log(result.cost)         // { tokens, estimatedUsd }
 ```
 
 ## Use the Math Standalone
@@ -198,7 +198,7 @@ const prediction = chain.predict()
 
 ## Cost
 
-5 agents × 3 rounds with GPT-4o-mini ≈ **$0.006 per solve**. Math analysis (28 modules) adds $0.000 — it's pure CPU computation.
+Cost depends on your LLM model and task complexity. The math layer (28 modules) adds zero LLM cost — it's pure TypeScript computation. Every `SwarmResult` includes `cost.tokens` and `cost.estimatedUsd` so you can track spending.
 
 ## License
 

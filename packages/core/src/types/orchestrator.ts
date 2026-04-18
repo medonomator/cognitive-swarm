@@ -564,6 +564,8 @@ export interface SwarmConfig {
   readonly checkpoint?: CheckpointStorage
   /** Mid-solve evolution: spawn/dissolve agents based on gaps. */
   readonly evolution?: EvolutionConfig
+  /** Cost per token in USD for estimatedUsd calculation. Default: 0.000003 (~GPT-4o-mini). */
+  readonly costPerToken?: number
 }
 
 /** Resolved swarm config - all fields required. */
@@ -587,6 +589,7 @@ export interface ResolvedSwarmConfig {
   readonly tokenBudget: number | null
   readonly checkpoint: CheckpointStorage | null
   readonly evolution: ResolvedEvolutionConfig
+  readonly costPerToken: number
 }
 
 /** Final result of a swarm solve(). */

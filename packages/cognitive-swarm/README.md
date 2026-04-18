@@ -2,23 +2,36 @@
 
 **Swarm intelligence for LLM agents.** Not a pipeline. Not a chat loop. A signal-based swarm with formal consensus, 28 mathematical modules, and emergent behavior.
 
+[![npm](https://img.shields.io/npm/v/cognitive-swarm)](https://www.npmjs.com/package/cognitive-swarm)
 [![CI](https://github.com/medonomator/cognitive-swarm/actions/workflows/ci.yml/badge.svg)](https://github.com/medonomator/cognitive-swarm/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/@cognitive-swarm/orchestrator.svg)](https://www.npmjs.com/package/@cognitive-swarm/orchestrator)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/medonomator/cognitive-swarm/blob/main/LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](https://nodejs.org/)
 [![Docs](https://img.shields.io/badge/docs-website-blue.svg)](https://medonomator.github.io/cognitive-swarm/)
 
+## Install
+
+```bash
+npm install cognitive-swarm
+```
+
+This umbrella package installs and re-exports everything. You can also install individual packages if you only need specific functionality:
+
+```bash
+npm install @cognitive-swarm/math          # 28 math modules (standalone, no LLM dependency)
+npm install @cognitive-swarm/orchestrator   # SwarmOrchestrator only
+npm install @cognitive-swarm/signals        # Signal Bus only
+```
+
 ## Quick Start
 
 ```typescript
-import { SwarmOrchestrator } from '@cognitive-swarm/orchestrator'
+import { SwarmOrchestrator, researchTemplate } from 'cognitive-swarm'
 
 const swarm = new SwarmOrchestrator({
-  agents: createAgents(llmProvider),
+  ...researchTemplate({ engine }),
   maxRounds: 5,
   consensus: { strategy: 'confidence-weighted', threshold: 0.7 },
-  // Production-ready resilience
   tokenBudget: 10_000,
   retry: { maxRetries: 2, baseDelayMs: 500, circuitBreakerThreshold: 3 },
 })
@@ -92,26 +105,25 @@ Each agent has a full cognitive pipeline (via [cognitive-engine](https://github.
 
 | Package | Description |
 |---------|-------------|
-| [`@cognitive-swarm/core`](packages/core) | Types, interfaces, and event system |
-| [`@cognitive-swarm/signals`](packages/signals) | Signal Bus — the nervous system |
-| [`@cognitive-swarm/agent`](packages/agent) | LLM-powered swarm agents with Thompson Bandit |
-| [`@cognitive-swarm/consensus`](packages/consensus) | 5 consensus strategies |
-| [`@cognitive-swarm/orchestrator`](packages/orchestrator) | SwarmOrchestrator — the main entry point |
-| [`@cognitive-swarm/math`](packages/math) | 28 mathematical modules (see below) |
-| [`@cognitive-swarm/memory-pool`](packages/memory-pool) | In-memory shared knowledge |
-| [`@cognitive-swarm/memory-qdrant`](packages/memory-qdrant) | Persistent vector memory (Qdrant) |
-| [`@cognitive-swarm/reputation`](packages/reputation) | Agent reliability tracking |
-| [`@cognitive-swarm/introspection`](packages/introspection) | Deadlock detection, echo chamber detection |
-| [`@cognitive-swarm/composer`](packages/composer) | Dynamic swarm composition |
-| [`@cognitive-swarm/templates`](packages/templates) | Pre-built swarm configs (research, code review, debug, decision) |
-| [`@cognitive-swarm/evolution`](packages/evolution) | Self-evolving swarm — agents spawn agents |
-| [`@cognitive-swarm/evaluation`](packages/evaluation) | Outcome evaluation and grounding |
-| [`@cognitive-swarm/benchmarks`](packages/benchmarks) | Performance benchmarking harness |
-| [`@cognitive-swarm/mcp`](packages/mcp) | Model Context Protocol tool integration |
-| [`@cognitive-swarm/otel`](packages/otel) | OpenTelemetry distributed tracing (20 event types) |
-| [`@cognitive-swarm/a2a`](packages/a2a) | A2A protocol — interop with any agent framework |
-| [`@cognitive-swarm/tools-web-fetch`](packages/tools-web-fetch) | Web fetch & scrape MCP server |
-| [`@cognitive-swarm/tools-web-search`](packages/tools-web-search) | Web search MCP server (Brave Search) |
+| [`@cognitive-swarm/core`](https://www.npmjs.com/package/@cognitive-swarm/core) | Types, interfaces, and event system |
+| [`@cognitive-swarm/signals`](https://www.npmjs.com/package/@cognitive-swarm/signals) | Signal Bus — the nervous system |
+| [`@cognitive-swarm/agent`](https://www.npmjs.com/package/@cognitive-swarm/agent) | LLM-powered swarm agents with Thompson Bandit |
+| [`@cognitive-swarm/consensus`](https://www.npmjs.com/package/@cognitive-swarm/consensus) | 5 consensus strategies |
+| [`@cognitive-swarm/orchestrator`](https://www.npmjs.com/package/@cognitive-swarm/orchestrator) | SwarmOrchestrator — the main entry point |
+| [`@cognitive-swarm/math`](https://www.npmjs.com/package/@cognitive-swarm/math) | 28 mathematical modules (see below) |
+| [`@cognitive-swarm/memory-pool`](https://www.npmjs.com/package/@cognitive-swarm/memory-pool) | In-memory shared knowledge |
+| [`@cognitive-swarm/memory-qdrant`](https://www.npmjs.com/package/@cognitive-swarm/memory-qdrant) | Persistent vector memory (Qdrant) |
+| [`@cognitive-swarm/reputation`](https://www.npmjs.com/package/@cognitive-swarm/reputation) | Agent reliability tracking |
+| [`@cognitive-swarm/introspection`](https://www.npmjs.com/package/@cognitive-swarm/introspection) | Deadlock detection, echo chamber detection |
+| [`@cognitive-swarm/composer`](https://www.npmjs.com/package/@cognitive-swarm/composer) | Dynamic swarm composition |
+| [`@cognitive-swarm/templates`](https://www.npmjs.com/package/@cognitive-swarm/templates) | Pre-built swarm configs (research, code review, debug, decision) |
+| [`@cognitive-swarm/evolution`](https://www.npmjs.com/package/@cognitive-swarm/evolution) | Self-evolving swarm — agents spawn agents |
+| [`@cognitive-swarm/evaluation`](https://www.npmjs.com/package/@cognitive-swarm/evaluation) | Outcome evaluation and grounding |
+| [`@cognitive-swarm/mcp`](https://www.npmjs.com/package/@cognitive-swarm/mcp) | Model Context Protocol tool integration |
+| [`@cognitive-swarm/otel`](https://www.npmjs.com/package/@cognitive-swarm/otel) | OpenTelemetry distributed tracing (20 event types) |
+| [`@cognitive-swarm/a2a`](https://www.npmjs.com/package/@cognitive-swarm/a2a) | A2A protocol — interop with any agent framework |
+| [`@cognitive-swarm/tools-web-fetch`](https://www.npmjs.com/package/@cognitive-swarm/tools-web-fetch) | Web fetch & scrape MCP server |
+| [`@cognitive-swarm/tools-web-search`](https://www.npmjs.com/package/@cognitive-swarm/tools-web-search) | Web search MCP server (Brave Search) |
 
 ## Mathematical Foundation
 
@@ -177,21 +189,19 @@ Round N complete → Math Bridge analyzes all signals
 Production-ready with built-in fault tolerance:
 
 ```typescript
+import { SwarmOrchestrator, FileCheckpointStorage } from 'cognitive-swarm'
+
 const swarm = new SwarmOrchestrator({
   agents,
-  // Retry with exponential backoff + circuit breaker
   retry: {
     maxRetries: 3,
-    baseDelayMs: 500,        // Exponential: 500ms → 1s → 2s (±20% jitter)
-    circuitBreakerThreshold: 5, // Opens after 5 consecutive failures, 30s cooldown
+    baseDelayMs: 500,
+    circuitBreakerThreshold: 5,
   },
-  // Token budget — hard limit across all agents
   tokenBudget: 50_000,
-  // Checkpoint — resume interrupted solves
   checkpoint: new FileCheckpointStorage('./checkpoints'),
 })
 
-// Resume from where it left off after a crash
 const result = await swarm.solveResumable('complex task', 'checkpoint-id')
 ```
 
@@ -222,27 +232,29 @@ Layers 1–3 are ephemeral. Layers 4–7 persist across sessions, enabling the s
 Real-time event stream with 20 event types:
 
 ```typescript
+import { SwarmOrchestrator } from 'cognitive-swarm'
+
 for await (const event of swarm.solveWithStream('Analyze this codebase')) {
   switch (event.type) {
-    case 'solve:start':       // Task begins
-    case 'round:start':       // New deliberation round
-    case 'signal:emitted':    // Agent emitted a signal
-    case 'agent:reacted':     // Agent processed signals
-    case 'consensus:check':   // Consensus evaluation
-    case 'math:round-analysis': // Math bridge results (entropy, surprise, etc.)
-    case 'advisor:action':    // Swarm advisor intervention
-    case 'synthesis:complete': // Final answer synthesized
-    case 'solve:complete':    // Full result with costs and timing
+    case 'solve:start':         // Task begins
+    case 'round:start':         // New deliberation round
+    case 'signal:emitted':      // Agent emitted a signal
+    case 'agent:reacted':       // Agent processed signals
+    case 'consensus:check':     // Consensus evaluation
+    case 'math:round-analysis': // Math bridge results
+    case 'advisor:action':      // Swarm advisor intervention
+    case 'synthesis:complete':  // Final answer synthesized
+    case 'solve:complete':      // Full result with costs and timing
   }
 }
 ```
 
 ## A2A Protocol (Agent-to-Agent)
 
-Expose any cognitive-swarm as a standard [A2A](https://google.github.io/A2A/) agent. Any framework (CrewAI, AutoGen, LangChain) can call it via HTTP.
+Expose any cognitive-swarm as a standard [A2A](https://google.github.io/A2A/) agent:
 
 ```typescript
-import { createA2AHandler, createA2AServer } from '@cognitive-swarm/a2a'
+import { createA2AHandler, createA2AServer, SwarmOrchestrator } from 'cognitive-swarm'
 
 const handler = createA2AHandler({
   name: 'Research Swarm',
@@ -254,81 +266,52 @@ const handler = createA2AHandler({
 
 const server = createA2AServer(handler, { port: 4000 })
 await server.start()
-// GET  http://localhost:4000/health                       → { status: 'ok' }
-// GET  http://localhost:4000/.well-known/agent-card.json  → Agent Card
-// POST http://localhost:4000                              → JSON-RPC (tasks/send, tasks/sendSubscribe)
 ```
-
-Features: 1MB body limit, graceful shutdown with connection tracking, health endpoint.
 
 ## MCP (Model Context Protocol)
 
 Give swarm agents access to external tools via [MCP](https://modelcontextprotocol.io/):
 
 ```typescript
-import { McpToolRegistry, McpToolExecutor } from '@cognitive-swarm/mcp'
+import { McpToolRegistry } from 'cognitive-swarm'
 
 const registry = new McpToolRegistry()
 await registry.connect({
   name: 'github',
   transport: { type: 'stdio', command: 'npx', args: ['-y', '@modelcontextprotocol/server-github'] },
 })
-
-// Agents can now call GitHub tools (search repos, read files, create PRs)
-// Tools execute in parallel via Promise.all
 ```
 
 ## OpenTelemetry
 
-Zero-overhead when no provider is configured. Full span hierarchy with 20 event types when enabled.
-
 ```typescript
-import { instrumentSwarm } from '@cognitive-swarm/otel'
+import { instrumentSwarm } from 'cognitive-swarm'
 
 const instrumented = instrumentSwarm(orchestrator)
 const result = await instrumented.solve('task')
-// Traces: solve → round → agent/debate → consensus → math → synthesis
-// All 20 events produce spans: topology changes, signal delivery, votes, conflicts...
 ```
 
 ## Pre-built Templates
 
 ```typescript
-import { researchTemplate, codeReviewTemplate, decisionTemplate, debugTemplate } from '@cognitive-swarm/templates'
+import { researchTemplate, codeReviewTemplate, decisionTemplate, debugTemplate } from 'cognitive-swarm'
 
-const research   = researchTemplate({ engine })    // 5 agents: explorer, analyst, critic, synthesizer, fact-checker
+const research   = researchTemplate({ engine })    // 5 agents
 const codeReview = codeReviewTemplate({ engine })   // Security, perf, arch, bugs, tests
-const decision   = decisionTemplate({ engine })     // Pros, cons, risk, precedent, devil's advocate, judge
+const decision   = decisionTemplate({ engine })     // Pros, cons, risk, devil's advocate, judge
 const debug      = debugTemplate({ engine })        // 7 agents: reproducer, tracer, hypothesizer, ...
 ```
 
 ## Self-Evolving Swarm
 
-Agents detect gaps in collective expertise and vote to spawn new specialists. No other framework has this.
+Agents detect gaps in collective expertise and vote to spawn new specialists:
 
 ```
 Day 1:  5 agents → basic analysis
 Day 12: anomaly-detector can't diagnose Docker issues
         → gap:detected → swarm votes → spawns docker-specialist
 Day 25: docker-specialist caught 3 real issues → PERMANENT
-Day 40: DNS issue → spawns network-analyst (temporary) → dissolved after 2 days
 Month 3: Swarm grew from 5 → 8 agents, all self-created
-```
-
-## Examples
-
-```bash
-# Research: multi-agent analysis with 5 specialized agents
-OPENAI_API_KEY=sk-... npx tsx examples/research/index.ts
-
-# Decision: structured deliberation with 6 agents + devil's advocate
-OPENAI_API_KEY=sk-... npx tsx examples/decision/index.ts
-
-# Debug: 7 agents collaboratively diagnose issues
-OPENAI_API_KEY=sk-... npx tsx examples/debug/index.ts
-
-# Streaming: real-time events + OTel + token budget + retry
-OPENAI_API_KEY=sk-... npx tsx examples/streaming/index.ts
 ```
 
 ## Cost Tracking
@@ -343,21 +326,15 @@ console.log(result.timing.totalMs)    // Total wall-clock time
 console.log(result.timing.roundsUsed) // Rounds until consensus
 ```
 
-The math layer (28 modules) adds zero LLM cost — it's pure TypeScript computation, no API calls.
+The math layer (28 modules) adds zero LLM cost — it's pure TypeScript computation, no API calls. Cost per token is configurable via `SwarmConfig.costPerToken`.
 
-## Development
+## Documentation
 
-```bash
-npm install        # Install all dependencies
-npm run build      # Build all 20 packages
-npm run test       # Run tests across all packages
-npm run lint       # Lint all packages
-```
-
-Requires Node.js >= 20. Monorepo managed by Turborepo.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development guide.
+- [Full Documentation](https://medonomator.github.io/cognitive-swarm/)
+- [Getting Started](https://medonomator.github.io/cognitive-swarm/guide/getting-started)
+- [Architecture](https://medonomator.github.io/cognitive-swarm/guide/architecture)
+- [GitHub](https://github.com/medonomator/cognitive-swarm)
 
 ## License
 
-[Apache-2.0](LICENSE)
+[Apache-2.0](https://github.com/medonomator/cognitive-swarm/blob/main/LICENSE)

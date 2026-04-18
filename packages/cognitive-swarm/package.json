@@ -1,0 +1,71 @@
+{
+  "name": "cognitive-swarm",
+  "version": "0.2.0",
+  "description": "Signal-based swarm intelligence for LLM agents — formal consensus, 28 math modules, emergent behavior",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@cognitive-swarm/core": "*",
+    "@cognitive-swarm/signals": "*",
+    "@cognitive-swarm/consensus": "*",
+    "@cognitive-swarm/agent": "*",
+    "@cognitive-swarm/orchestrator": "*",
+    "@cognitive-swarm/math": "*",
+    "@cognitive-swarm/evolution": "*",
+    "@cognitive-swarm/evaluation": "*",
+    "@cognitive-swarm/composer": "*",
+    "@cognitive-swarm/reputation": "*",
+    "@cognitive-swarm/introspection": "*",
+    "@cognitive-swarm/templates": "*",
+    "@cognitive-swarm/memory-pool": "*",
+    "@cognitive-swarm/memory-qdrant": "*",
+    "@cognitive-swarm/otel": "*",
+    "@cognitive-swarm/mcp": "*",
+    "@cognitive-swarm/a2a": "*"
+  },
+  "license": "Apache-2.0",
+  "author": "Dmitry Zorin",
+  "keywords": [
+    "ai",
+    "agents",
+    "swarm-intelligence",
+    "multi-agent",
+    "consensus",
+    "cognitive-engine",
+    "typescript",
+    "openai",
+    "llm"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/medonomator/cognitive-swarm.git",
+    "directory": "packages/cognitive-swarm"
+  },
+  "homepage": "https://medonomator.github.io/cognitive-swarm/",
+  "bugs": {
+    "url": "https://github.com/medonomator/cognitive-swarm/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1"
+  }
+}

@@ -477,4 +477,4 @@ interface SwarmResult {
 | `evolution.minValueForKeep` | 0.5 | |
 | `evolution.cooldownRounds` | 3 | |
 | `evolution.nmiPruneThreshold` | 0.8 | |
-| Cost per token | $0.000003 | `COST_PER_TOKEN_USD` |
+| `costPerToken` | $0.000003 | Configurable via `SwarmConfig.costPerToken` |

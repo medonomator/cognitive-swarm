@@ -421,7 +421,7 @@ result.evolutionReport?.activeEvolvedCount     // still active
 
 // Cost and timing
 result.cost.tokens                             // total tokens used
-result.cost.estimatedUsd                       // estimated cost ($0.000003/token)
+result.cost.estimatedUsd                       // estimated cost (configurable via costPerToken)
 result.timing.totalMs                          // wall clock time
 result.timing.roundsUsed                       // rounds completed
 
