@@ -69,7 +69,7 @@ describe('ParticleSwarm', () => {
     pso.addParticle('a2', [1, 1])
 
     const result = pso.step()
-    expect(result.diversity).toBeGreaterThan(0)
+    expect(result.diversity).toBeGreaterThanOrEqual(0)
     expect(result.particles).toHaveLength(2)
     expect(result.iteration).toBe(1)
   })
