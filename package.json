@@ -26,10 +26,14 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "clean": "turbo run clean",
-    "typecheck": "turbo run build"
+    "typecheck": "turbo run build",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
+    "vitepress": "^1.6.4",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",
