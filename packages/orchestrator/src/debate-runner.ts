@@ -3,7 +3,7 @@ import type {
   DebateResult,
   SwarmEventMap,
 } from '@cognitive-swarm/core'
-import { TypedEventEmitter } from '@cognitive-swarm/core'
+import type { TypedEventEmitter } from '@cognitive-swarm/core'
 import { uid } from '@cognitive-engine/core'
 import type { SwarmAgent } from '@cognitive-swarm/agent'
 import type { SignalBus } from '@cognitive-swarm/signals'

@@ -1,5 +1,5 @@
 import type { ErrorHandler } from '@cognitive-engine/core'
-import type { ConflictPair, VotePayload } from './signal.js'
+import type { CausalLevel, ConflictPair, VotePayload } from './signal.js'
 
 /** Built-in consensus strategy identifiers. */
 export type ConsensusStrategyId =
@@ -51,6 +51,8 @@ export interface VoteRecord {
   readonly proposalId: string
   readonly vote: VotePayload
   readonly timestamp: number
+  /** Causal reasoning level of the signal that produced this vote. */
+  readonly causalLevel?: CausalLevel
 }
 
 /** Final consensus result. */

@@ -1,4 +1,3 @@
-import type { SignalType } from '@cognitive-swarm/core'
 import type {
   SignalEvent,
   SignalGraph,

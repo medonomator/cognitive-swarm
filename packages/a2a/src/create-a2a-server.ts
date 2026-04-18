@@ -1,4 +1,5 @@
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from 'node:http'
+import type { Socket } from 'node:net'
 import { JsonRpcTransportHandler } from '@a2a-js/sdk/server'
 import type { DefaultRequestHandler } from '@a2a-js/sdk/server'
 import type { JSONRPCResponse } from '@a2a-js/sdk'
@@ -37,12 +38,12 @@ export function createA2AServer(
   const transport = new JsonRpcTransportHandler(handler)
 
   // Track active connections for graceful shutdown
-  const connections = new Set<import('node:net').Socket>()
+  const connections = new Set<Socket>()
 
   const server = createServer(async (req, res) => {
     try {
       await handleRequest(req, res, handler, transport)
-    } catch (error: unknown) {
+    } catch {
       if (!res.headersSent) {
         res.writeHead(500, { 'Content-Type': 'application/json' })
         res.end(JSON.stringify({

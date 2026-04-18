@@ -7,7 +7,7 @@ import type {
   VoteRecord,
   SwarmEventMap,
 } from '@cognitive-swarm/core'
-import { TypedEventEmitter } from '@cognitive-swarm/core'
+import type { TypedEventEmitter } from '@cognitive-swarm/core'
 import { defaultErrorHandler } from '@cognitive-engine/core'
 import { VotingStrategy } from './strategies/voting-strategy.js'
 import { ConfidenceWeightedStrategy } from './strategies/confidence-weighted-strategy.js'

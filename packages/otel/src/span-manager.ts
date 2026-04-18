@@ -278,7 +278,7 @@ export class SpanManager {
     }
   }
 
-  onDebateStart(data: { proposalA: string; proposalB: string }): void {
+  onDebateStart(_data: { proposalA: string; proposalB: string }): void {
     try {
       const roundSpan = this.getCurrentRoundSpan()
       if (!roundSpan) return
@@ -386,7 +386,7 @@ export class SpanManager {
     }
   }
 
-  onSynthesisComplete(data: SynthesisCompleteEvent): void {
+  onSynthesisComplete(_data: SynthesisCompleteEvent): void {
     try {
       if (!this.synthesisSpan) return
 

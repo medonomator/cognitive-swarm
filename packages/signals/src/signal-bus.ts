@@ -7,7 +7,7 @@ import type {
   ConflictPair,
   SwarmEventMap,
 } from '@cognitive-swarm/core'
-import { TypedEventEmitter } from '@cognitive-swarm/core'
+import type { TypedEventEmitter } from '@cognitive-swarm/core'
 import { defaultErrorHandler } from '@cognitive-engine/core'
 import { ConflictDetector } from './conflict-detector.js'
 

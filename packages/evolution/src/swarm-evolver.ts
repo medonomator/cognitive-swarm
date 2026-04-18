@@ -1,5 +1,5 @@
 import type { LlmProvider } from '@cognitive-engine/core'
-import type { PersonalityVector, SignalType } from '@cognitive-swarm/core'
+import type { PersonalityVector } from '@cognitive-swarm/core'
 import type {
   GapSignal,
   SpawnProposal,
@@ -115,7 +115,7 @@ export class SwarmEvolver {
       roleDescription: role.description,
       personality: role.personality,
       listens: ['task:new', 'discovery', 'challenge'],
-      canEmit: ['discovery', 'proposal', 'doubt', 'vote'],
+      canEmit: ['discovery', 'proposal', 'challenge', 'doubt', 'vote'],
       temporary: gap.urgency < 0.5,
       proposedBy: [...(this.confirmations.get(gapId) ?? [])],
       votes: [],

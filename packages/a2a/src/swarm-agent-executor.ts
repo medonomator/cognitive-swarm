@@ -91,7 +91,7 @@ export class SwarmAgentExecutor implements AgentExecutor {
 
   async cancelTask(
     taskId: string,
-    eventBus: ExecutionEventBus,
+    _eventBus: ExecutionEventBus,
   ): Promise<void> {
     const orchestrator = this.activeTasks.get(taskId)
     if (orchestrator) {

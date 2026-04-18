@@ -1,6 +1,5 @@
 import type {
   Signal,
-  SignalType,
   ProposalPayload,
   VotePayload,
   DiscoveryPayload,
@@ -10,27 +9,23 @@ import type {
   SwarmResult,
   SwarmEvent,
   SwarmEventMap,
-  SwarmAdvice,
   DebateResult,
   ConsensusResult,
   Proposal,
   VoteRecord,
-  MathAnalysis,
   ResolvedMathConfig,
-  VectorMemory,
   AgentReaction,
-  SolveCheckpoint,
   SwarmControlSignals,
 } from '@cognitive-swarm/core'
-import { TypedEventEmitter } from '@cognitive-swarm/core'
-import type { ErrorHandler } from '@cognitive-engine/core'
+import type { TypedEventEmitter } from '@cognitive-swarm/core'
+import type { ErrorHandler, EngineConfig } from '@cognitive-engine/core'
 import { defaultErrorHandler, uid } from '@cognitive-engine/core'
 import { CognitiveOrchestrator } from '@cognitive-engine/orchestrator'
 import { ThompsonBandit, MemoryBanditStorage } from '@cognitive-engine/bandit'
 import { SwarmAgent } from '@cognitive-swarm/agent'
 import { SignalBus } from '@cognitive-swarm/signals'
 import { ConsensusEngine } from '@cognitive-swarm/consensus'
-import { TokenTrackingLlmProvider, TokenBudgetExceededError } from './token-tracker.js'
+import { TokenTrackingLlmProvider } from './token-tracker.js'
 import { ResilientLlmProvider } from './resilient-llm-provider.js'
 import { ContributionTracker } from './contribution-tracker.js'
 import { RoundRunner } from './round-runner.js'
@@ -39,6 +34,10 @@ import { MathBridge } from './math-bridge.js'
 import { SwarmAdvisor } from './swarm-advisor.js'
 import { DebateRunner, DEFAULT_CONVERGENCE_THRESHOLD } from './debate-runner.js'
 import { AgentSelector } from './agent-selector.js'
+import { EvolutionController, type EvolutionAction } from './evolution-controller.js'
+import { CalibrationTracker } from './calibration-tracker.js'
+import { GlobalWorkspace } from './global-workspace.js'
+import { PredictionEngine } from './prediction-engine.js'
 
 const DEFAULT_MAX_ROUNDS = 10
 const DEFAULT_MAX_SIGNALS = 200
@@ -70,8 +69,17 @@ export class SwarmOrchestrator {
   private readonly advisor: SwarmAdvisor | null
   private readonly debateRunner: DebateRunner | null
   private readonly agentSelector: AgentSelector | null
+  private readonly evolutionController: EvolutionController | null
+  private readonly calibrationTracker: CalibrationTracker
+  private readonly globalWorkspace: GlobalWorkspace
+  private readonly predictionEngine: PredictionEngine
   private readonly events: TypedEventEmitter<SwarmEventMap>
   private readonly onError: ErrorHandler
+
+  // ── Evolution state (reset per solve) ──
+  private evolvedAgents: SwarmAgent[] = []
+  private evolvedTrackers: TokenTrackingLlmProvider[] = []
+  private evolvedDisabled = new Set<string>()
 
   constructor(config: SwarmConfig) {
     this.config = resolveSwarmConfig(config)
@@ -138,6 +146,19 @@ export class SwarmOrchestrator {
     this.agentSelector = this.config.agentSelection
       ? new AgentSelector(this.config.agentSelection)
       : null
+
+    this.evolutionController = this.config.evolution.enabled
+      ? new EvolutionController(this.config.evolution)
+      : null
+
+    this.calibrationTracker = new CalibrationTracker()
+    this.globalWorkspace = new GlobalWorkspace()
+    this.predictionEngine = new PredictionEngine()
+
+    // Wire prediction engine into agent selector for surprise-based scoring
+    if (this.agentSelector) {
+      this.agentSelector.setPredictionEngine(this.predictionEngine)
+    }
   }
 
   /**
@@ -145,10 +166,14 @@ export class SwarmOrchestrator {
    * Runs the round-based loop until consensus or limits are reached.
    */
   async solve(task: string): Promise<SwarmResult> {
+    const solveId = uid('solve')
     const startTime = Date.now()
     this.contributionTracker.reset()
     this.mathBridge.reset()
     this.advisor?.reset()
+    this.resetEvolution()
+    this.globalWorkspace.reset()
+    this.predictionEngine.reset()
     for (const tracker of this.tokenTrackers) tracker.reset()
 
     if (this.agentSelector && this.config.banditStorage) {
@@ -189,14 +214,22 @@ export class SwarmOrchestrator {
       roundsUsed = round + 1
       this.events.emit('round:start', { round: roundsUsed })
 
+      const activeAgents = this.activeAgents
+
+      // Predictive Processing: generate predictions before the round
+      const predictions = activeAgents.map(a =>
+        this.predictionEngine.generatePrediction(a.id, roundsUsed),
+      )
+
       const roundResult = await this.roundRunner.run({
-        agents: this.agents,
+        agents: activeAgents,
         pendingSignals,
         contributionTracker: this.contributionTracker,
         events: this.events,
         disabledAgents: this.advisor?.disabledAgents,
         topology: this.advisor?.currentTopology?.neighbors,
         agentSelector: this.agentSelector ?? undefined,
+        globalWorkspace: this.globalWorkspace,
       })
 
       for (const signal of roundResult.newSignals) {
@@ -209,13 +242,16 @@ export class SwarmOrchestrator {
       totalSignals += roundResult.newSignals.length
       pendingSignals = roundResult.newSignals
 
+      // Predictive Processing: compute prediction errors after the round
+      this.predictionEngine.computeErrors(predictions, roundResult.newSignals, roundsUsed)
+
       const allProposals = this.signalBus.getHistory({ type: 'proposal' })
       const allVotes = this.signalBus.getHistory({ type: 'vote' })
       this.mathBridge.processRound(roundResult.newSignals, allProposals, allVotes)
 
       if (this.advisor) {
-        const agentIds = this.agents.map((a) => a.id)
-        const advice = this.advisor.evaluateRound(
+        const agentIds = activeAgents.map((a) => a.id)
+        const advice = await this.advisor.evaluateRound(
           roundResult.newSignals,
           roundsUsed,
           this.mathBridge,
@@ -233,6 +269,19 @@ export class SwarmOrchestrator {
               reason: action.reason,
             })
           }
+        }
+      }
+
+      // ── Evolution: spawn/dissolve agents mid-solve ──
+      if (this.evolutionController) {
+        const mathAnalysis = this.mathBridge.analyze()
+        const contributions = this.contributionTracker.getContributions()
+        const agentIds = activeAgents.map(a => a.id)
+        const evolutionActions = this.evolutionController.evaluateRound(
+          roundsUsed, mathAnalysis, contributions, agentIds,
+        )
+        if (evolutionActions.length > 0) {
+          this.applyEvolutionActions(evolutionActions)
         }
       }
 
@@ -353,12 +402,18 @@ export class SwarmOrchestrator {
 
     await this.recordBanditFeedback(finalConsensus, allReactions)
 
+    // Record calibration data for self-model improvement
+    this.calibrationTracker.recordSolveOutcome(
+      allReactions, finalConsensus, this.signalBus.getHistory(),
+    )
+
     const totalTokens = this.tokenTrackers.reduce(
       (sum, t) => sum + t.totalTokens,
       0,
     )
 
     return {
+      solveId,
       answer,
       confidence: finalConsensus.confidence,
       consensus: finalConsensus,
@@ -375,6 +430,7 @@ export class SwarmOrchestrator {
       mathAnalysis: this.mathBridge.analyze(),
       advisorReport: this.advisor?.getReport() ?? null,
       debateResults,
+      evolutionReport: this.evolutionController?.getReport() ?? null,
     }
   }
 
@@ -391,6 +447,7 @@ export class SwarmOrchestrator {
       return this.solve(task)
     }
 
+    const solveId = uid('solve')
     const id = checkpointId ?? uid('ckpt')
     const existing = checkpointId ? await storage.load(checkpointId) : null
 
@@ -405,6 +462,8 @@ export class SwarmOrchestrator {
     this.contributionTracker.reset()
     this.mathBridge.reset()
     this.advisor?.reset()
+    this.resetEvolution()
+    this.predictionEngine.reset()
     for (const tracker of this.tokenTrackers) tracker.reset()
 
     if (this.agentSelector && this.config.banditStorage) {
@@ -455,14 +514,22 @@ export class SwarmOrchestrator {
       roundsUsed = round + 1
       this.events.emit('round:start', { round: roundsUsed })
 
+      const activeAgents = this.activeAgents
+
+      // Predictive Processing: generate predictions before the round
+      const predictions = activeAgents.map(a =>
+        this.predictionEngine.generatePrediction(a.id, roundsUsed),
+      )
+
       const roundResult = await this.roundRunner.run({
-        agents: this.agents,
+        agents: activeAgents,
         pendingSignals,
         contributionTracker: this.contributionTracker,
         events: this.events,
         disabledAgents: this.advisor?.disabledAgents,
         topology: this.advisor?.currentTopology?.neighbors,
         agentSelector: this.agentSelector ?? undefined,
+        globalWorkspace: this.globalWorkspace,
       })
 
       for (const signal of roundResult.newSignals) {
@@ -475,13 +542,16 @@ export class SwarmOrchestrator {
       totalSignals += roundResult.newSignals.length
       pendingSignals = roundResult.newSignals
 
+      // Predictive Processing: compute prediction errors after the round
+      this.predictionEngine.computeErrors(predictions, roundResult.newSignals, roundsUsed)
+
       const allProposals = this.signalBus.getHistory({ type: 'proposal' })
       const allVotes = this.signalBus.getHistory({ type: 'vote' })
       this.mathBridge.processRound(roundResult.newSignals, allProposals, allVotes)
 
       if (this.advisor) {
-        const agentIds = this.agents.map((a) => a.id)
-        const advice = this.advisor.evaluateRound(
+        const agentIds = activeAgents.map((a) => a.id)
+        const advice = await this.advisor.evaluateRound(
           roundResult.newSignals,
           roundsUsed,
           this.mathBridge,
@@ -499,6 +569,19 @@ export class SwarmOrchestrator {
               reason: action.reason,
             })
           }
+        }
+      }
+
+      // ── Evolution: spawn/dissolve agents mid-solve ──
+      if (this.evolutionController) {
+        const mathAnalysis = this.mathBridge.analyze()
+        const contributions = this.contributionTracker.getContributions()
+        const agentIds = activeAgents.map(a => a.id)
+        const evolutionActions = this.evolutionController.evaluateRound(
+          roundsUsed, mathAnalysis, contributions, agentIds,
+        )
+        if (evolutionActions.length > 0) {
+          this.applyEvolutionActions(evolutionActions)
         }
       }
 
@@ -627,6 +710,7 @@ export class SwarmOrchestrator {
     )
 
     return {
+      solveId,
       answer,
       confidence: finalConsensus.confidence,
       consensus: finalConsensus,
@@ -643,6 +727,7 @@ export class SwarmOrchestrator {
       mathAnalysis: this.mathBridge.analyze(),
       advisorReport: this.advisor?.getReport() ?? null,
       debateResults,
+      evolutionReport: this.evolutionController?.getReport() ?? null,
     }
   }
 
@@ -651,10 +736,13 @@ export class SwarmOrchestrator {
    * The final event is always `solve:complete` with the full SwarmResult.
    */
   async *solveWithStream(task: string): AsyncIterable<SwarmEvent> {
+    const solveId = uid('solve')
     const startTime = Date.now()
     this.contributionTracker.reset()
     this.mathBridge.reset()
     this.advisor?.reset()
+    this.resetEvolution()
+    this.predictionEngine.reset()
     for (const tracker of this.tokenTrackers) tracker.reset()
 
     if (this.agentSelector && this.config.banditStorage) {
@@ -703,14 +791,22 @@ export class SwarmOrchestrator {
       this.events.emit('round:start', { round: roundsUsed })
       yield { type: 'round:start', round: roundsUsed }
 
+      const activeAgents = this.activeAgents
+
+      // Predictive Processing: generate predictions before the round
+      const predictions = activeAgents.map(a =>
+        this.predictionEngine.generatePrediction(a.id, roundsUsed),
+      )
+
       const roundResult = await this.roundRunner.run({
-        agents: this.agents,
+        agents: activeAgents,
         pendingSignals,
         contributionTracker: this.contributionTracker,
         events: this.events,
         disabledAgents: this.advisor?.disabledAgents,
         topology: this.advisor?.currentTopology?.neighbors,
         agentSelector: this.agentSelector ?? undefined,
+        globalWorkspace: this.globalWorkspace,
       })
 
       for (const reaction of roundResult.reactions) {
@@ -725,13 +821,16 @@ export class SwarmOrchestrator {
       totalSignals += roundResult.newSignals.length
       pendingSignals = roundResult.newSignals
 
+      // Predictive Processing: compute prediction errors after the round
+      this.predictionEngine.computeErrors(predictions, roundResult.newSignals, roundsUsed)
+
       const allProposals = this.signalBus.getHistory({ type: 'proposal' })
       const allVotes = this.signalBus.getHistory({ type: 'vote' })
       this.mathBridge.processRound(roundResult.newSignals, allProposals, allVotes)
 
       if (this.advisor) {
-        const agentIds = this.agents.map((a) => a.id)
-        const advice = this.advisor.evaluateRound(
+        const agentIds = activeAgents.map((a) => a.id)
+        const advice = await this.advisor.evaluateRound(
           roundResult.newSignals,
           roundsUsed,
           this.mathBridge,
@@ -750,6 +849,26 @@ export class SwarmOrchestrator {
               type: 'topology:updated',
               neighbors: action.neighbors,
               reason: action.reason,
+            }
+          }
+        }
+      }
+
+      // ── Evolution: spawn/dissolve agents mid-solve ──
+      if (this.evolutionController) {
+        const mathAnalysis = this.mathBridge.analyze()
+        const contributions = this.contributionTracker.getContributions()
+        const agentIds = activeAgents.map(a => a.id)
+        const evolutionActions = this.evolutionController.evaluateRound(
+          roundsUsed, mathAnalysis, contributions, agentIds,
+        )
+        if (evolutionActions.length > 0) {
+          this.applyEvolutionActions(evolutionActions)
+          for (const ea of evolutionActions) {
+            if (ea.type === 'spawn') {
+              yield { type: 'evolution:spawned', agentId: ea.domain, domain: ea.domain, reason: ea.proposal.roleDescription ?? ea.proposal.role }
+            } else {
+              yield { type: 'evolution:dissolved', agentId: ea.agentId, reason: ea.reason }
             }
           }
         }
@@ -913,6 +1032,7 @@ export class SwarmOrchestrator {
     )
 
     const result: SwarmResult = {
+      solveId,
       answer,
       confidence: finalConsensus.confidence,
       consensus: finalConsensus,
@@ -929,6 +1049,7 @@ export class SwarmOrchestrator {
       mathAnalysis: this.mathBridge.analyze(),
       advisorReport: this.advisor?.getReport() ?? null,
       debateResults,
+      evolutionReport: this.evolutionController?.getReport() ?? null,
     }
 
     yield { type: 'solve:complete', result }
@@ -954,6 +1075,79 @@ export class SwarmOrchestrator {
   destroy(): void {
     this.signalBus.destroy()
     this.events.removeAllListeners()
+  }
+
+  /** All active agents: base + evolved, excluding disabled. */
+  private get activeAgents(): readonly SwarmAgent[] {
+    const all = [...this.agents, ...this.evolvedAgents]
+    if (this.evolvedDisabled.size === 0) return all
+    return all.filter(a => !this.evolvedDisabled.has(a.id))
+  }
+
+  /** Reset evolution state for a new solve. */
+  private resetEvolution(): void {
+    this.evolvedAgents = []
+    this.evolvedTrackers = []
+    this.evolvedDisabled.clear()
+    this.evolutionController?.reset()
+  }
+
+  /**
+   * Apply evolution actions from EvolutionController.
+   * Spawn = create new SwarmAgent from proposal preset.
+   * Dissolve = disable the agent.
+   */
+  private applyEvolutionActions(actions: readonly EvolutionAction[]): void {
+    for (const action of actions) {
+      if (action.type === 'spawn') {
+        const agentId = uid('evolved')
+        const proposal = action.proposal
+
+        // Reuse the first agent's engine config as template for evolved agents
+        const templateEngine = this.config.agents[0]?.engine
+        if (!templateEngine) continue
+
+        const resilient = new ResilientLlmProvider(templateEngine.llm, this.config.retry)
+        const tracker = new TokenTrackingLlmProvider(resilient)
+        this.evolvedTrackers.push(tracker)
+
+        if (this.config.tokenBudget !== null) {
+          const allTrackers = [...this.tokenTrackers, ...this.evolvedTrackers]
+          const getSharedTotal = () =>
+            allTrackers.reduce((sum, t) => sum + t.totalTokens, 0)
+          tracker.setBudget(this.config.tokenBudget, getSharedTotal)
+        }
+
+        const engineConfig: EngineConfig = { ...templateEngine, llm: tracker }
+        const orchestrator = new CognitiveOrchestrator(engineConfig)
+        const storage = this.config.banditStorage ?? new MemoryBanditStorage()
+        const bandit = new ThompsonBandit(storage)
+
+        const agent = new SwarmAgent(orchestrator, bandit, {
+          id: agentId,
+          name: `evolved-${proposal.role}`,
+          role: proposal.roleDescription ?? proposal.role,
+          personality: proposal.personality,
+          listens: [...proposal.listens],
+          canEmit: [...proposal.canEmit],
+        })
+
+        this.evolvedAgents.push(agent)
+
+        this.events.emit('evolution:spawned', {
+          agentId,
+          domain: action.domain,
+          reason: proposal.roleDescription ?? proposal.role,
+        })
+      } else if (action.type === 'dissolve') {
+        this.evolvedDisabled.add(action.agentId)
+
+        this.events.emit('evolution:dissolved', {
+          agentId: action.agentId,
+          reason: action.reason,
+        })
+      }
+    }
   }
 
   /** Check whether the token budget has been exhausted. */
@@ -993,9 +1187,11 @@ export class SwarmOrchestrator {
 
   /**
    * Apply attention weights from surprise analysis to vote weights.
-   * Agents who consistently provide surprising (informative) signals
-   * get their votes amplified. This closes the feedback loop:
-   * surprise → attention → weighted consensus → better decisions.
+   *
+   * Attention is clamped to [0.8, 1.2] — a mild nudge, not a multiplier.
+   * Surprise-based priority belongs in signal routing (AgentSelector),
+   * not in consensus vote weighting. Unbounded attention (up to 3x)
+   * was causing surprising agents to drown out agreement and block consensus.
    */
   private applyAttentionWeights(
     votes: readonly VoteRecord[],
@@ -1009,7 +1205,9 @@ export class SwarmOrchestrator {
     if (Object.keys(weights).length === 0) return votes
 
     return votes.map((record) => {
-      const attention = weights[record.agentId] ?? 1.0
+      const rawAttention = weights[record.agentId] ?? 1.0
+      // Clamp to mild range — surprise should inform routing, not dominate votes
+      const attention = Math.max(0.8, Math.min(1.2, rawAttention))
       return {
         agentId: record.agentId,
         proposalId: record.proposalId,
@@ -1083,6 +1281,7 @@ export class SwarmOrchestrator {
           proposalId: s.payload.proposalId,
           vote: s.payload,
           timestamp: s.timestamp,
+          causalLevel: s.metadata?.causalLevel,
         })
       }
     }
@@ -1381,6 +1580,8 @@ function resolveSwarmConfig(config: SwarmConfig): ResolvedSwarmConfig {
                 protectBridgingAgents: config.advisor.topology.protectBridgingAgents ?? true,
               }
             : null,
+          metaAgentLlm: config.advisor.metaAgentLlm ?? null,
+          metaAgentInterval: config.advisor.metaAgentInterval ?? 3,
         }
       : null,
     retry: {
@@ -1392,5 +1593,13 @@ function resolveSwarmConfig(config: SwarmConfig): ResolvedSwarmConfig {
     onError: config.onError ?? defaultErrorHandler,
     tokenBudget: config.tokenBudget ?? null,
     checkpoint: config.checkpoint ?? null,
+    evolution: {
+      enabled: config.evolution?.enabled ?? false,
+      maxEvolvedAgents: config.evolution?.maxEvolvedAgents ?? 3,
+      evaluationWindow: config.evolution?.evaluationWindow ?? 5,
+      minValueForKeep: config.evolution?.minValueForKeep ?? 0.5,
+      cooldownRounds: config.evolution?.cooldownRounds ?? 3,
+      nmiPruneThreshold: config.evolution?.nmiPruneThreshold ?? 0.8,
+    },
   }
 }
