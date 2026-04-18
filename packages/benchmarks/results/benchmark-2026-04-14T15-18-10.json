@@ -1,0 +1,165 @@
+{
+  "results": [
+    {
+      "name": "Multi-Domain Architecture",
+      "description": "Design healthcare collaborative editor covering 12 domain concerns. Swarm of 7 vs single model.",
+      "swarm": {
+        "answer": "# System Design Document for Real-Time Collaborative Document Editor\n\n## Overview\nThis document outlines the architecture for a real-time collaborative document editor tailored for a European healthcare company. The design prioritizes compliance with HIPAA and GDPR, ensuring security, performance, and features such as audit trails and end-to-end encryption.\n\n---\n\n## 1. User Interface (UI) Layer\n\n### Technology Choice\n- **React.js with Redux**\n  - **Rationale**: React provides a responsive UI suitable for real-time updates, while Redux efficiently manages application state, crucial for handling up to 10,000 concurrent users.\n  \n### Handling Constraints\n- Optimized rendering strategies minimize latency, ensuring real-time updates are efficient.\n\n### Trade-offs\n- Initial learning curve for developers unfamiliar with these technologies.\n\n### Failure Modes and Recovery Strategies\n- UI crashes are mitigated through error boundaries. Recovery involves reloading the application state from the server.\n\n### Interaction with Other Components\n- Communicates with the WebSocket server for real-time updates and sends user edits.\n\n---\n\n## 2. Real-Time Collaboration Engine\n\n### Technology Choice\n- **WebSocket (with Socket.IO)**\n  - **Rationale**: WebSocket allows full-duplex communication, essential for real-time collaboration with <100ms latency.\n\n### Handling Constraints\n- Maintains persistent connections to minimize latency and optimize data payload.\n\n### Trade-offs\n- Requires additional server resources; scaling may be challenging under high load.\n\n### Failure Modes and Recovery Strategies\n- Connection loss triggers a reconnection protocol. Users can continue working offline if reconnection fails.\n\n### Interaction with Other Components\n- Interfaces with the Document Store and Conflict Resolution Layer to manage document states.\n\n---\n\n## 3. Document Store\n\n### Technology Choice\n- **MongoDB with GridFS**\n  - **Rationale**: MongoDB's schema-less structure is suitable for various document types and supports versioning.\n\n### Handling Constraints\n- Enables rapid document retrieval and modification, with versioning allowing restoration at any point.\n\n### Trade-offs\n- Complex queries may lead to slower performance; suitable indexes must be implemented.\n\n### Failure Modes and Recovery Strategies\n- Data availability is ensured through replica sets, and backups are scheduled frequently.\n\n### Interaction with Other Components\n- Interfaces with the Real-Time Collaboration Engine for storing and retrieving document states.\n\n---\n\n## 4. Conflict Resolution Layer\n\n### Technology Choice\n- **CRDTs (Conflict-Free Replicated Data Types)**\n  - **Rationale**:",
+        "score": 0.4166666666666667,
+        "tokensUsed": 534755,
+        "durationMs": 336294,
+        "costUsd": 0.152405175,
+        "signalCount": 42,
+        "roundsUsed": 3
+      },
+      "baseline": {
+        "answer": "Designing a real-time collaborative document editor for a European healthcare company involves addressing multiple requirements, including security, scalability, compliance, and cost. Below is a comprehensive architecture that meets these needs.\n\n### System Architecture Overview\n\n1. **Frontend (Web Application)**\n   - **Technology**: React.js with Redux for state management\n   - **Why**: React.js provides a component-based architecture that is efficient for building interactive UIs. Redux helps manage the application state, especially for real-time updates.\n   - **Handling Constraints**: The frontend will handle real-time updates using WebSockets, ensuring <100ms latency for character-by-character sync.\n   - **Trade-offs**: Complexity in state management; however, it allows for a more responsive UI.\n   - **Failure Modes**: If the WebSocket connection fails, the app can fall back to long polling or use a service worker for offline capabilities.\n   - **Interaction**: Communicates with the backend via WebSocket for real-time updates and REST APIs for document management.\n\n2. **Real-time Collaboration Engine**\n   - **Technology**: WebSocket with Operational Transformation (OT) or Conflict-free Replicated Data Types (CRDTs)\n   - **Why**: WebSockets provide a persistent connection for real-time communication. OT or CRDTs are essential for resolving conflicts in collaborative editing.\n   - **Handling Constraints**: Ensures <100ms latency and allows for offline editing with conflict resolution upon reconnection.\n   - **Trade-offs**: OT is more mature but can be complex to implement; CRDTs are easier to reason about but may have performance implications.\n   - **Failure Modes**: If the real-time engine fails, users can still edit documents locally, and changes will sync when the connection is restored.\n   - **Interaction**: Integrates with the backend to synchronize document changes and manage user sessions.\n\n3. **Backend API**\n   - **Technology**: Node.js with Express.js\n   - **Why**: Node.js is non-blocking and can handle a large number of concurrent connections, making it suitable for real-time applications.\n   - **Handling Constraints**: The API will manage user sessions, document storage, and versioning.\n   - **Trade-offs**: Single-threaded nature of Node.js may lead to performance bottlenecks under heavy load; however, clustering can mitigate this.\n   - **Failure Modes**: If the API server fails, a load balancer can redirect traffic to a standby instance.\n   - **Interaction**: Communicates with the database for document storage and retrieval, and with the real-time engine for updates.\n\n4. **Database**\n   - **Technology**: PostgreSQL with TimescaleDB extension for versioning\n   - **Why**: PostgreSQL is a robust relational database that supports complex queries and transactions. TimescaleDB allows for efficient time-series data management, which is useful for versioning.\n   - **Handling Constraints**: Supports document versioning and audit trails, ensuring compliance with HIPAA and GDPR.\n   - **Trade-offs**: Relational databases can be less performant for large-scale document storage compared to NoSQL; however, the need for ACID compliance justifies this choice.\n   - **Failure Modes**: Use replication and automated backups to recover from data loss or corruption.\n   - **Interaction**: The backend API interacts with the database for CRUD operations and version management.\n\n5. **Authentication and Authorization**\n   - **Technology**: LDAP/Active Directory integration with OAuth2 for token-based authentication\n   - **Why**: Using existing LDAP/Active Directory allows for seamless integration with the company’s user management system.\n   - **Handling Constraints**: Ensures secure access to sensitive data and complies with GDPR.\n   - **Trade-offs**: Dependency on the existing LDAP infrastructure; if it goes down, user authentication will fail.\n   - **Failure Modes**: Implement a fallback mechanism to allow local authentication for emergency access.\n   - **Interaction**: The backend API verifies user tokens against the LDAP server.\n\n6. **Data Storage and Encryption**\n   - **Technology**: AWS S3 with server-side encryption (SSE) and client-side encryption using AES-256\n   - **Why**: S3 is a scalable object storage solution that can handle large amounts of data. Client-side encryption ensures that even the server cannot read document content.\n   - **Handling Constraints**: End-to-end encryption protects sensitive patient data, complying with HIPAA and GDPR.\n   - **Trade-offs**: Increased complexity in managing encryption keys and performance overhead for encryption/decryption.\n   - **Failure Modes**: Use S3 versioning and lifecycle policies to recover from accidental deletions or corruption.\n   - **Interaction**: The backend API interacts with S3 for document storage and retrieval.\n\n7. **Multi-region Deployment**\n   - **Technology**: AWS with CloudFront for CDN and Route 53 for DNS management\n   - **Why**: AWS provides a robust infrastructure for multi-region deployments, ensuring low latency and high availability.\n   - **Handling Constraints**: Data residency requirements can be met by deploying in EU-West and EU-Central regions.\n   - **Trade-offs**: Increased complexity in managing deployments across multiple regions.\n   - **Failure Modes**: Use Route 53 health checks to reroute traffic in case of regional failures.\n   - **Interaction**: All components are deployed in multiple regions, with traffic routed based on user location.\n\n### Cost Management\n- **Infrastructure Cost**: Use AWS pricing calculators to estimate costs for EC2 instances, S3 storage, RDS, and data transfer. Aim to optimize instance types and use reserved instances where possible to stay under the $50k/month budget.\n\n### Conclusion\nThis architecture provides a comprehensive solution for a real-time collaborative document editor that meets all specified requirements. By leveraging modern technologies and best practices, it ensures security, scalability, compliance, and cost-effectiveness while addressing potential failure modes and recovery strategies.",
+        "score": 1,
+        "tokensUsed": 4057,
+        "durationMs": 21173,
+        "costUsd": 0.00042864
+      },
+      "comparison": {
+        "scoreDelta": -0.5833333333333333,
+        "costRatio": 355.5551861702128,
+        "speedRatio": 15.883153072309073,
+        "qualityPerDollar": 0.001171876217457839,
+        "winner": "baseline"
+      },
+      "mathAnalysis": {
+        "entropy": {
+          "final": 3.9762537962752704,
+          "normalized": 0.953555230585669,
+          "history": [
+            1,
+            2.4458929372487725,
+            3.9762537962752704
+          ]
+        },
+        "informationGain": {
+          "total": 0,
+          "perRound": 0,
+          "lastRound": 0
+        },
+        "redundancy": {
+          "averageNMI": 0.6082546344756428,
+          "redundantAgents": [
+            "security-arch",
+            "distributed-sys",
+            "infra-cost",
+            "reliability",
+            "compliance",
+            "arch-lead",
+            "identity"
+          ],
+          "mostUniqueAgent": "compliance"
+        },
+        "markov": {
+          "dominantState": "proposal",
+          "cyclesDetected": true,
+          "cycleStates": [
+            "proposal",
+            "vote",
+            "discovery"
+          ]
+        },
+        "bayesian": {
+          "mapEstimate": {
+            "proposalId": "prop_1776179564339_122",
+            "probability": 0.141061889100839
+          },
+          "posteriors": {
+            "prop_1776179564339_122": 0.141061889100839,
+            "prop_1776179567385_126": 0.141061889100839,
+            "prop_1776179592237_193": 0.04702062970027969,
+            "prop_1776179615606_222": 0.05485740131699296,
+            "prop_1776179658167_274": 0.06400030153649176,
+            "prop_1776179654610_271": 0.07466701845924037,
+            "prop_1776179681359_377": 0.029037173845260156,
+            "prop_1776179683213_381": 0.03065035016999683,
+            "prop_1776179682214_379": 0.03235314740166332,
+            "prop_1776179680422_375": 0.0341505444795335,
+            "prop_1776179708483_495": 0.036047796950618695,
+            "prop_1776179729735_562": 0.03805045233676418,
+            "prop_1776179764310_600": 0.0401643663554733,
+            "prop_1776179783392_670": 0.042395720041888484,
+            "prop_1776179810585_761": 0.044751037821993356,
+            "prop_1776179812619_765": 0.0472372065898819,
+            "prop_1776179833411_814": 0.049861495844875335,
+            "prop_1776179835292_816": 0.052631578947368404
+          },
+          "evidenceCount": 4
+        },
+        "gameTheory": {
+          "expectedChallengers": 7,
+          "actualChallengers": 6,
+          "groupthinkRisk": "low"
+        },
+        "opinionDynamics": {
+          "clusterCount": 1,
+          "polarizationIndex": 4.930380657631324e-32,
+          "fragmentationRisk": "low",
+          "bridgingAgents": []
+        },
+        "replicatorDynamics": {
+          "dominantStrategy": "challenge",
+          "convergenceToESS": 2.8110514865102827,
+          "suggestedShifts": [
+            {
+              "strategy": "challenge",
+              "direction": "increase",
+              "magnitude": 0.8063036298614321
+            },
+            {
+              "strategy": "proposal",
+              "direction": "decrease",
+              "magnitude": 0.5118474671046291
+            },
+            {
+              "strategy": "vote",
+              "direction": "decrease",
+              "magnitude": 0.2944561627568031
+            }
+          ]
+        },
+        "influence": {
+          "influenceConcentration": 0,
+          "fiedlerValue": 0.2346918962709802,
+          "isFragile": false,
+          "isolatedAgents": []
+        },
+        "optimalStopping": {
+          "cusumStatistic": 0.15000000000000002,
+          "explorationComplete": true,
+          "changeDetected": false
+        },
+        "shapley": {
+          "values": {
+            "security-arch": 0.19512195121951229,
+            "distributed-sys": 0.17073170731707324,
+            "reliability": 0.09756097560975613,
+            "arch-lead": 0.14634146341463417,
+            "compliance": 0.09756097560975613,
+            "infra-cost": 0.17073170731707324,
+            "identity": 0.1219512195121952
+          },
+          "redundantAgents": [],
+          "topContributors": [
+            "security-arch",
+            "distributed-sys",
+            "infra-cost",
+            "arch-lead"
+          ]
+        },
+        "stoppingReason": "information-gain-exhausted"
+      },
+      "timestamp": 1776179890766
+    }
+  ],
+  "swarmWins": 0,
+  "baselineWins": 1,
+  "ties": 0,
+  "totalSwarmCost": 0.152405175,
+  "totalBaselineCost": 0.00042864,
+  "timestamp": 1776179890766
+}

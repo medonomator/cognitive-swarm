@@ -1,0 +1,6 @@
+export { ConsensusEngine } from './consensus-engine.js'
+export { VotingStrategy } from './strategies/voting-strategy.js'
+export { ConfidenceWeightedStrategy } from './strategies/confidence-weighted-strategy.js'
+export { HierarchicalStrategy } from './strategies/hierarchical-strategy.js'
+export { BayesianStrategy } from './strategies/bayesian-strategy.js'
+export { EntropyStrategy } from './strategies/entropy-strategy.js'

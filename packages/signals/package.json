@@ -1,0 +1,38 @@
+{
+  "name": "@cognitive-swarm/signals",
+  "version": "0.1.0",
+  "description": "Signal bus — the nervous system of the cognitive swarm",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@cognitive-swarm/core": "*",
+    "@cognitive-engine/core": "*"
+  },
+  "license": "Apache-2.0",
+  "author": "Dmitry Zorin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/medonomator/cognitive-swarm.git",
+    "directory": "packages/signals"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

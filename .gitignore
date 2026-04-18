@@ -1,0 +1,10 @@
+node_modules
+dist
+.turbo
+*.tsbuildinfo
+.env
+.env.*
+.state/
+results/
+observe-daily.sh
+observe-weekly.sh

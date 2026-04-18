@@ -1,0 +1,394 @@
+{
+  "results": [
+    {
+      "name": "Code Review Accuracy",
+      "description": "Find bugs in intentionally buggy TypeScript. Swarm of 5 vs single model.",
+      "swarm": {
+        "answer": "Here is a comprehensive numbered list of all distinct bugs, security issues, and potential problems identified in the provided TypeScript code:\n\n1. **Off-by-One Error in Loop Bound**\n   - **Location**: `findMax` function\n   - **Issue**: The loop condition uses `<= arr.length`, which can lead to accessing an undefined index.\n   - **Fix**: Change the loop condition to `for (let i = 1; i < arr.length; i++)`.\n\n2. **SQL Injection Vulnerability**\n   - **Location**: `getUser` function\n   - **Issue**: User input (`userId`) is directly interpolated into the SQL query string, posing a risk for SQL injection attacks.\n   - **Fix**: Use parameterized queries or prepared statements to safely include user input.\n\n3. **Race Condition**\n   - **Location**: `handleRequest` function\n   - **Issue**: The shared mutable state (`requestCount`) can lead to race conditions when multiple requests are processed concurrently.\n   - **Fix**: Implement synchronization mechanisms, such as locks or atomic operations, to manage access to `requestCount`.\n\n4. **Memory Leak — Event Listener Never Removed**\n   - **Location**: `createWidget` function\n   - **Issue**: The event listener (`handler`) is added but never removed, which can potentially cause memory leaks.\n   - **Fix**: Remove the event listener using `element.removeEventListener('click', handler)` in the `destroy` method.\n\n5. **Incorrect Null Check**\n   - **Location**: `processValue` function\n   - **Issue**: The check `if (value != null)` also allows `undefined` values to pass through, which may cause runtime errors.\n   - **Fix**: Change the condition to explicitly check for both `null` and `undefined`, e.g., `if (value === null || value === undefined)`.\n\n### Additional Considerations:\n- **Resource Management**: Ensure proper release of resources (like database connections) to prevent leaks.\n- **Input Validation**: Implement thorough input validation for functions handling user input to prevent injection attacks and ensure input conformity.\n- **Concurrency Control**: Consider using atomic operations or mutexes to manage shared state safely in concurrent environments. \n\nThis list encapsulates all the critical issues that need to be addressed to improve the correctness, security, and performance of the code.",
+        "score": 1,
+        "tokensUsed": 175149,
+        "durationMs": 126663,
+        "costUsd": 0.049917464999999994,
+        "signalCount": 18,
+        "roundsUsed": 2
+      },
+      "baseline": {
+        "answer": "Here is a thorough review of the provided TypeScript code, identifying bugs, security issues, and potential problems:\n\n### Bug 1: Off-by-one error in loop bound\n- **Issue**: The loop condition `i <= arr.length` should be `i < arr.length`. This will cause an \"index out of bounds\" error when `i` equals `arr.length`, as array indices are zero-based.\n- **Fix**: Change the loop condition to `i < arr.length`.\n\n### Bug 2: SQL injection vulnerability\n- **Issue**: The code uses string interpolation to construct an SQL query, which can lead to SQL injection attacks if `userId` is not properly sanitized.\n- **Fix**: Use parameterized queries or prepared statements to prevent SQL injection. For example:\n  ```typescript\n  const query = 'SELECT * FROM users WHERE id = ?';\n  return db.query(query, [userId]);\n  ```\n\n### Bug 3: Race condition — shared mutable state without lock\n- **Issue**: The `requestCount` variable is shared across multiple requests without any synchronization mechanism, which can lead to race conditions in a concurrent environment.\n- **Fix**: Use a locking mechanism or atomic operations to ensure that increments to `requestCount` are thread-safe. Alternatively, consider using a dedicated counter that is managed per request.\n\n### Bug 4: Memory leak — event listener never removed\n- **Issue**: The `createWidget` function adds an event listener to the `element`, but the `destroy` method does not remove it, leading to potential memory leaks.\n- **Fix**: Implement the `removeEventListener` in the `destroy` method:\n  ```typescript\n  return { \n    destroy() { \n      element.removeEventListener('click', handler); \n    } \n  };\n  ```\n\n### Bug 5: Incorrect null check\n- **Issue**: The logic in the `processValue` function is inverted. The check `if (value != null)` will return true for both `null` and `undefined`, which means the function will return 'no value provided' when `value` is `null` or `undefined`. The subsequent line `return value.toUpperCase();` will throw an error if `value` is `null` or `undefined`.\n- **Fix**: Change the logic to check for `null` or `undefined` correctly:\n  ```typescript\n  if (value == null) {\n    return 'no value provided';\n  }\n  return value.toUpperCase();\n  ```\n\n### Additional Potential Issues\n1. **Type Safety**: The `db` parameter in `getUser` is typed as `any`. This can lead to runtime errors if the `db` object does not have a `query` method. It is advisable to define a proper interface for the database object.\n   \n2. **Error Handling**: The `getUser` and `handleRequest` functions do not handle potential errors from the database query or the asynchronous processing. Consider adding try-catch blocks to handle exceptions gracefully.\n\n3. **Function Naming**: The function `processAsync` is defined but not used in a meaningful way. It simply returns the request object. If this function is intended to perform some processing, it should be implemented accordingly.\n\n4. **Use of `any` Type**: The use of `any` for `req` and `db` parameters reduces type safety. It is better to define specific types or interfaces for these parameters to leverage TypeScript's type-checking capabilities.\n\nBy addressing these issues, the code will be more robust, secure, and maintainable.",
+        "score": 1,
+        "tokensUsed": 1137,
+        "durationMs": 17659,
+        "costUsd": 0.00032404499999999996
+      },
+      "comparison": {
+        "scoreDelta": 0,
+        "costRatio": 154.0448548812665,
+        "speedRatio": 7.172716461860808,
+        "qualityPerDollar": 0.0064916157100525845,
+        "winner": "tie"
+      },
+      "mathAnalysis": {
+        "entropy": {
+          "final": 2.5433863607288867,
+          "normalized": 0.8477954535762956,
+          "history": [
+            0,
+            2.5433863607288867
+          ]
+        },
+        "informationGain": {
+          "total": 0,
+          "perRound": 0,
+          "lastRound": 0
+        },
+        "redundancy": {
+          "averageNMI": 0.4017013920273051,
+          "redundantAgents": [
+            "correctness",
+            "concurrency",
+            "resources",
+            "synthesizer"
+          ],
+          "mostUniqueAgent": "security"
+        },
+        "markov": {
+          "dominantState": "proposal",
+          "cyclesDetected": true,
+          "cycleStates": [
+            "challenge",
+            "proposal"
+          ]
+        },
+        "bayesian": {
+          "mapEstimate": {
+            "proposalId": "sig_1776177066093_88",
+            "probability": 0.4384623860200641
+          },
+          "posteriors": {
+            "sig_1776177066093_88": 0.4384623860200641,
+            "sig_1776177096386_164": 0.05480779825250803,
+            "sig_1776177094477_161": 0.06165877303407153,
+            "sig_1776177115875_206": 0.06936611966333046,
+            "sig_1776177136538_256": 0.07803688462124676,
+            "sig_1776177135093_254": 0.08779149519890261,
+            "sig_1776177160262_310": 0.09876543209876543,
+            "sig_1776177156678_307": 0.11111111111111109
+          },
+          "evidenceCount": 0
+        },
+        "gameTheory": {
+          "expectedChallengers": 5,
+          "actualChallengers": 3,
+          "groupthinkRisk": "medium"
+        },
+        "opinionDynamics": {
+          "clusterCount": 1,
+          "polarizationIndex": 4.930380657631324e-32,
+          "fragmentationRisk": "low",
+          "bridgingAgents": []
+        },
+        "replicatorDynamics": {
+          "dominantStrategy": "discovery",
+          "convergenceToESS": 3.356959607734494,
+          "suggestedShifts": [
+            {
+              "strategy": "discovery",
+              "direction": "increase",
+              "magnitude": 0.8802677920011327
+            },
+            {
+              "strategy": "proposal",
+              "direction": "decrease",
+              "magnitude": 0.6901338960005664
+            },
+            {
+              "strategy": "challenge",
+              "direction": "decrease",
+              "magnitude": 0.19013389600056638
+            }
+          ]
+        },
+        "influence": null,
+        "optimalStopping": {
+          "cusumStatistic": 0.1,
+          "explorationComplete": true,
+          "changeDetected": false
+        },
+        "shapley": {
+          "values": {
+            "security": 0.1764705882352941,
+            "correctness": 0.23529411764705882,
+            "resources": 0.23529411764705882,
+            "synthesizer": 0.23529411764705882,
+            "concurrency": 0.11764705882352941
+          },
+          "redundantAgents": [],
+          "topContributors": [
+            "correctness",
+            "resources",
+            "synthesizer"
+          ]
+        },
+        "stoppingReason": "cycle-detected"
+      },
+      "timestamp": 1776177174145
+    },
+    {
+      "name": "Research Breadth",
+      "description": "Generate unique insights on LLMs in software engineering. Swarm of 5 vs single model.",
+      "swarm": {
+        "answer": "Here is a comprehensive list of unique insights regarding the implications of large language models (LLMs) for software engineering practices, considering both opportunities and risks across the development lifecycle:\n\n1. **Dynamic Skill Requirements**: The integration of LLMs will shift the demand from traditional coding skills to expertise in prompt engineering and the interpretation of AI-generated code, necessitating new training programs for developers.\n\n2. **Team Structure Evolution**: LLMs may lead to the formation of hybrid teams that include software engineers, AI specialists, and data scientists, fostering innovation but requiring a reevaluation of roles and responsibilities.\n\n3. **Quality Assurance Transformation**: LLMs can enhance automated testing by generating test cases and identifying bugs, but reliance on AI-generated tests may introduce risks if developers lack understanding of the underlying logic.\n\n4. **Code Review Paradigm Shift**: Traditional code review processes may evolve, with a focus on architectural and design decisions rather than line-by-line reviews, prompting a reevaluation of how code quality is maintained.\n\n5. **Ethical Considerations in AI Utilization**: The use of LLMs raises ethical concerns, such as bias in generated code and misuse of AI capabilities, necessitating the establishment of ethical guidelines and governance frameworks.\n\n6. **Increased Collaboration with Non-Technical Stakeholders**: LLMs can enable non-technical team members to contribute to software development through natural language communication, fostering collaboration but requiring clear communication protocols.\n\n7. **Risk of Over-Reliance on AI**: While LLMs can enhance productivity, there is a risk of developers becoming overly reliant on AI-generated solutions, potentially diminishing critical thinking and problem-solving skills.\n\n8. **Impact on Project Management**: Project management methodologies may need to adapt to the rapid prototyping capabilities enabled by LLMs, with a potential increase in agile practices.\n\n9. **Automated Code Generation and Maintenance**: LLMs may evolve to autonomously generate entire software systems from high-level specifications, reducing the need for traditional coding roles and shifting focus to requirements definition.\n\n10. **Intelligent Code Review and Quality Assurance**: LLMs could serve as intelligent code reviewers, providing feedback on code quality and security vulnerabilities, but may lead to over-reliance on AI evaluations.\n\n11. **Dynamic Documentation Generation**: LLMs may automate the generation and updating of documentation based on code changes, reducing maintenance overhead but potentially lacking depth or context.\n\n12. **Personalized Development Environments**",
+        "score": 0.6,
+        "tokensUsed": 127450,
+        "durationMs": 97375,
+        "costUsd": 0.035622434999999994,
+        "signalCount": 16,
+        "roundsUsed": 2
+      },
+      "baseline": {
+        "answer": "Certainly! The implications of large language models (LLMs) for software engineering practices are multifaceted, affecting various stages of the development lifecycle. Here are several unique perspectives:\n\n1. **Enhanced Code Generation**: LLMs can automate the generation of boilerplate code, allowing developers to focus on more complex tasks. This can lead to faster prototyping and reduced time-to-market for new features. However, reliance on LLMs for code generation may lead to a lack of understanding of underlying principles among junior developers.\n\n2. **Improved Documentation**: LLMs can assist in generating and maintaining documentation by automatically summarizing code changes or generating comments. This can improve code readability and maintainability. However, the quality of generated documentation may vary, leading to potential misinformation if not reviewed by human experts.\n\n3. **Code Review Augmentation**: LLMs can serve as assistants in code review processes by identifying potential bugs, suggesting improvements, or flagging non-compliance with coding standards. While this can enhance the review process, it may also create a false sense of security, leading developers to overlook critical issues.\n\n4. **Natural Language Interfaces**: The integration of LLMs into development environments can enable natural language queries for codebases, allowing developers to ask questions about code functionality or structure. This democratizes access to code knowledge but may also lead to misunderstandings if the model misinterprets queries.\n\n5. **Testing Automation**: LLMs can generate unit tests or integration tests based on code snippets, improving test coverage and reducing manual testing efforts. However, the generated tests may not always align with the intended use cases, potentially leading to gaps in testing.\n\n6. **Bias in Code Generation**: LLMs trained on existing codebases may inadvertently perpetuate biases present in the training data, leading to the generation of code that reflects these biases. This can have implications for software fairness and inclusivity, particularly in applications that impact diverse user groups.\n\n7. **Skill Shift in Development Teams**: As LLMs take on more coding tasks, the skill set required for software engineers may shift from coding proficiency to higher-level problem-solving and system design. This could lead to a re-evaluation of educational curricula and professional development programs.\n\n8. **Dependency Management**: LLMs can assist in identifying and managing dependencies in software projects, suggesting libraries or frameworks that align with project requirements. However, over-reliance on LLMs for dependency management may lead to the inclusion of unnecessary or outdated libraries, increasing technical debt.\n\n9. **Security Vulnerabilities**: While LLMs can help identify security vulnerabilities in code, they can also generate insecure code if not properly guided. This duality presents a risk where developers may inadvertently introduce vulnerabilities while relying on LLM-generated suggestions.\n\n10. **Collaboration and Communication**: LLMs can facilitate better communication among team members by translating technical jargon into layman's terms, making it easier for non-technical stakeholders to understand project progress. However, this could also lead to oversimplification, where critical technical nuances are lost.\n\n11. **Version Control and Change Management**: LLMs can assist in managing version control by predicting merge conflicts or suggesting resolutions based on historical data. However, this could lead to complacency in understanding version control principles, resulting in poor change management practices.\n\n12. **Ethical Considerations**: The use of LLMs raises ethical questions regarding authorship and accountability in software development. If an LLM generates a significant portion of the code, who is responsible for bugs or security flaws? This could complicate legal and ethical frameworks in software engineering.\n\n13. **Impact on Agile Methodologies**: LLMs can enhance agile practices by providing real-time feedback and suggestions during sprint planning and retrospectives. However, this could also lead to a dilution of the agile principles of collaboration and iterative improvement if teams become overly reliant on automated suggestions.\n\n14. **Cultural Shifts in Development Teams**: The integration of LLMs may foster a culture of experimentation and innovation, encouraging teams to explore new ideas without the fear of failure. Conversely, it could also create a culture of dependency, where teams hesitate to make decisions without LLM input.\n\n15. **Long-term Maintenance Challenges**: As LLMs generate code, the long-term maintainability of that code could become a concern. If the generated code lacks clarity or is not well-structured, it may lead to challenges in future updates or modifications, complicating the software lifecycle.\n\n16. **Integration with DevOps Practices**: LLMs can streamline DevOps practices by automating deployment scripts or infrastructure as code configurations. However, this could lead to a disconnect between development and operations teams if the generated scripts do not align with operational realities.\n\n17. **User Experience Design**: LLMs can assist in generating user interface code based on user stories or design specifications, potentially speeding up the design process. However, this may lead to a lack of user-centered design principles if the model does not fully understand user needs.\n\n18. **Regulatory Compliance**: In industries with strict regulatory requirements, LLMs can help ensure that code adheres to compliance standards by suggesting best practices. However, the risk remains that LLMs may not be fully aware of the latest regulations, leading to compliance oversights.\n\n19. **Knowledge Transfer and Onboarding**: LLMs can facilitate knowledge transfer by providing new team members with contextual information about codebases and project histories. However, this could also lead to a superficial understanding of the code, as new developers may rely too heavily on LLMs instead of engaging with the code directly.\n\n20. **Impact on Open Source Contributions**: LLMs can lower the barrier to entry for contributing to open source projects by simplifying the coding process. However, this could also lead to an influx of low-quality contributions, overwhelming maintainers and diluting the quality of open source software.\n\nThese insights illustrate the complex interplay between opportunities and risks that large language models present to software engineering practices across the development lifecycle. Each perspective highlights the need for careful consideration and strategic implementation to harness the benefits while mitigating potential downsides.",
+        "score": 1,
+        "tokensUsed": 1336,
+        "durationMs": 19476,
+        "costUsd": 0.00038075999999999995
+      },
+      "comparison": {
+        "scoreDelta": -0.4,
+        "costRatio": 93.5561377245509,
+        "speedRatio": 4.999743273772848,
+        "qualityPerDollar": 0.006413261754846349,
+        "winner": "baseline"
+      },
+      "mathAnalysis": {
+        "entropy": {
+          "final": 2.012292804373737,
+          "normalized": 0.7784611203498484,
+          "history": [
+            0,
+            2.012292804373737
+          ]
+        },
+        "informationGain": {
+          "total": 0,
+          "perRound": 0,
+          "lastRound": 0
+        },
+        "redundancy": {
+          "averageNMI": 0.5079753411066841,
+          "redundantAgents": [
+            "explorer-dev",
+            "explorer-risk",
+            "explorer-future",
+            "synthesizer"
+          ],
+          "mostUniqueAgent": "explorer-org"
+        },
+        "markov": {
+          "dominantState": "proposal",
+          "cyclesDetected": true,
+          "cycleStates": [
+            "vote",
+            "proposal"
+          ]
+        },
+        "bayesian": {
+          "mapEstimate": {
+            "proposalId": "sig_1776177222509_400",
+            "probability": 0.5539229646561533
+          },
+          "posteriors": {
+            "sig_1776177222509_400": 0.5539229646561533,
+            "sig_1776177242592_465": 0.06401459836182323,
+            "sig_1776177265927_497": 0.07468369808879372,
+            "sig_1776177261410_495": 0.08713098110359269,
+            "sig_1776177284061_545": 0.10165281128752478,
+            "sig_1776177282409_542": 0.1185949465021122
+          },
+          "evidenceCount": 1
+        },
+        "gameTheory": {
+          "expectedChallengers": 5,
+          "actualChallengers": 3,
+          "groupthinkRisk": "medium"
+        },
+        "opinionDynamics": {
+          "clusterCount": 1,
+          "polarizationIndex": 0,
+          "fragmentationRisk": "low",
+          "bridgingAgents": []
+        },
+        "replicatorDynamics": {
+          "dominantStrategy": "discovery",
+          "convergenceToESS": 2.943093070845403,
+          "suggestedShifts": [
+            {
+              "strategy": "discovery",
+              "direction": "increase",
+              "magnitude": 0.8705304515955952
+            },
+            {
+              "strategy": "proposal",
+              "direction": "decrease",
+              "magnitude": 0.49017681719853184
+            },
+            {
+              "strategy": "vote",
+              "direction": "decrease",
+              "magnitude": 0.19017681719853177
+            },
+            {
+              "strategy": "challenge",
+              "direction": "decrease",
+              "magnitude": 0.19017681719853177
+            }
+          ]
+        },
+        "influence": null,
+        "optimalStopping": {
+          "cusumStatistic": 0.1,
+          "explorationComplete": true,
+          "changeDetected": false
+        },
+        "shapley": {
+          "values": {
+            "explorer-dev": 0.20000000000000007,
+            "explorer-org": 0.20000000000000007,
+            "explorer-risk": 0.20000000000000007,
+            "explorer-future": 0.20000000000000007,
+            "synthesizer": 0.20000000000000007
+          },
+          "redundantAgents": [],
+          "topContributors": [
+            "explorer-dev",
+            "explorer-org",
+            "explorer-risk"
+          ]
+        },
+        "stoppingReason": "cycle-detected"
+      },
+      "timestamp": 1776177301356
+    },
+    {
+      "name": "Adversarial Robustness",
+      "description": "Detect planted falsehood among true claims. Swarm of 4 vs single model.",
+      "swarm": {
+        "answer": "Here is the evaluation of each claim:\n\n1. **JavaScript uses prototypal inheritance, not classical inheritance.**\n   - **Evaluation**: TRUE. JavaScript employs prototypal inheritance, allowing objects to inherit directly from other objects. This is a core feature of the language, distinguishing it from classical inheritance found in languages like Java.\n\n2. **TCP is a connectionless protocol that does not guarantee delivery order.**\n   - **Evaluation**: FALSE. TCP is a connection-oriented protocol that guarantees reliable data transmission, including delivery order and error-checking. This claim confuses TCP with UDP, which is connectionless.\n\n3. **In PostgreSQL, a B-tree index is the default index type.**\n   - **Evaluation**: TRUE. PostgreSQL defaults to B-tree indexes for new indexes unless specified otherwise. B-trees are efficient for a wide range of queries, making them the standard choice.\n\n4. **React's virtual DOM compares the new tree with the previous one using a diffing algorithm.**\n   - **Evaluation**: TRUE. React uses a virtual DOM and a diffing algorithm to efficiently compare the new and previous trees, allowing it to update only the necessary parts of the actual DOM, enhancing performance.\n\n5. **HTTP/2 uses binary framing instead of text-based protocols like HTTP/1.1.**\n   - **Evaluation**: TRUE. HTTP/2 employs binary framing, which improves efficiency through features like multiplexing and header compression, contrasting with the text-based format of HTTP/1.1.\n\n**Summary of Evaluations:**\n1. TRUE\n2. FALSE\n3. TRUE\n4. TRUE\n5. TRUE",
+        "score": 1,
+        "tokensUsed": 59806,
+        "durationMs": 64255,
+        "costUsd": 0.017044709999999998,
+        "signalCount": 7,
+        "roundsUsed": 2
+      },
+      "baseline": {
+        "answer": "Let's evaluate each claim one by one:\n\n1. **JavaScript uses prototypal inheritance, not classical inheritance.**\n   - **TRUE**: JavaScript employs prototypal inheritance, which means that objects can inherit directly from other objects. This is different from classical inheritance, which is based on classes and instances, as seen in languages like Java or C++.\n\n2. **TCP is a connectionless protocol that does not guarantee delivery order.**\n   - **FALSE**: TCP (Transmission Control Protocol) is a connection-oriented protocol, meaning it establishes a connection before data is sent. It guarantees the delivery of packets in the order they were sent, ensuring reliable communication.\n\n3. **In PostgreSQL, a B-tree index is the default index type.**\n   - **TRUE**: In PostgreSQL, the default index type is indeed a B-tree index. This type of index is used for most queries and is optimized for equality and range queries.\n\n4. **React's virtual DOM compares the new tree with the previous one using a diffing algorithm.**\n   - **TRUE**: React uses a virtual DOM to optimize rendering performance. When the state of a component changes, React creates a new virtual DOM tree and compares it with the previous one using a diffing algorithm to determine the minimal number of changes needed to update the actual DOM.\n\n5. **HTTP/2 uses binary framing instead of text-based protocols like HTTP/1.1.**\n   - **TRUE**: HTTP/2 indeed uses binary framing, which allows for more efficient parsing and transmission of data compared to the text-based format used in HTTP/1.1. This change improves performance and reduces latency.\n\nIn summary:\n1. TRUE\n2. FALSE\n3. TRUE\n4. TRUE\n5. TRUE",
+        "score": 1,
+        "tokensUsed": 514,
+        "durationMs": 6668,
+        "costUsd": 0.00014649
+      },
+      "comparison": {
+        "scoreDelta": 0,
+        "costRatio": 116.35408560311284,
+        "speedRatio": 9.636322735452909,
+        "qualityPerDollar": 0.008594455405812126,
+        "winner": "tie"
+      },
+      "mathAnalysis": {
+        "entropy": {
+          "final": 0,
+          "normalized": 0,
+          "history": [
+            0
+          ]
+        },
+        "informationGain": {
+          "total": 0,
+          "perRound": 0,
+          "lastRound": 0
+        },
+        "redundancy": {
+          "averageNMI": 0.16503749927884379,
+          "redundantAgents": [],
+          "mostUniqueAgent": "judge"
+        },
+        "markov": {
+          "dominantState": "proposal",
+          "cyclesDetected": true,
+          "cycleStates": [
+            "vote",
+            "proposal"
+          ]
+        },
+        "bayesian": {
+          "mapEstimate": {
+            "proposalId": "sig_1776177364726_635",
+            "probability": 1
+          },
+          "posteriors": {
+            "sig_1776177364726_635": 1
+          },
+          "evidenceCount": 0
+        },
+        "gameTheory": {
+          "expectedChallengers": 4,
+          "actualChallengers": 3,
+          "groupthinkRisk": "low"
+        },
+        "opinionDynamics": {
+          "clusterCount": 1,
+          "polarizationIndex": 0,
+          "fragmentationRisk": "low",
+          "bridgingAgents": []
+        },
+        "replicatorDynamics": {
+          "dominantStrategy": "challenge",
+          "convergenceToESS": 1.6169316908788536,
+          "suggestedShifts": [
+            {
+              "strategy": "vote",
+              "direction": "decrease",
+              "magnitude": 0.490049750560736
+            },
+            {
+              "strategy": "challenge",
+              "direction": "increase",
+              "magnitude": 0.2450248752803681
+            },
+            {
+              "strategy": "proposal",
+              "direction": "increase",
+              "magnitude": 0.2450248752803681
+            }
+          ]
+        },
+        "influence": null,
+        "optimalStopping": {
+          "cusumStatistic": 0.1,
+          "explorationComplete": true,
+          "changeDetected": false
+        },
+        "shapley": {
+          "values": {
+            "analyst": 0.33333333333333337,
+            "skeptic": 0.16666666666666666,
+            "networking": 0.33333333333333337,
+            "judge": 0.16666666666666666
+          },
+          "redundantAgents": [],
+          "topContributors": [
+            "analyst",
+            "networking"
+          ]
+        },
+        "stoppingReason": "secretary-threshold"
+      },
+      "timestamp": 1776177372285
+    }
+  ],
+  "swarmWins": 0,
+  "baselineWins": 1,
+  "ties": 2,
+  "totalSwarmCost": 0.10258460999999999,
+  "totalBaselineCost": 0.000851295,
+  "timestamp": 1776177372287
+}

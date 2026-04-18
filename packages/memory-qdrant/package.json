@@ -1,0 +1,40 @@
+{
+  "name": "@cognitive-swarm/memory-qdrant",
+  "version": "0.1.0",
+  "description": "Qdrant-backed VectorMemory — persistent collective swarm knowledge",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "QDRANT_URL=http://localhost:6333 vitest run --reporter=verbose",
+    "lint": "eslint src/",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@cognitive-swarm/core": "*",
+    "@cognitive-engine/core": "*",
+    "@qdrant/js-client-rest": "^1"
+  },
+  "license": "Apache-2.0",
+  "author": "Dmitry Zorin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/medonomator/cognitive-swarm.git",
+    "directory": "packages/memory-qdrant"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

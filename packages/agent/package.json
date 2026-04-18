@@ -1,0 +1,40 @@
+{
+  "name": "@cognitive-swarm/agent",
+  "version": "0.1.0",
+  "description": "Swarm agent — cognitive agent wrapper for swarm participation",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@cognitive-swarm/core": "*",
+    "@cognitive-engine/core": "*",
+    "@cognitive-engine/orchestrator": "*",
+    "@cognitive-engine/bandit": "*"
+  },
+  "license": "Apache-2.0",
+  "author": "Dmitry Zorin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/medonomator/cognitive-swarm.git",
+    "directory": "packages/agent"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

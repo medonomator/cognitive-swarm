@@ -1,0 +1,46 @@
+{
+  "name": "@cognitive-swarm/orchestrator",
+  "version": "0.1.0",
+  "description": "Swarm orchestrator — ties agents, signals, and consensus into solve()",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@cognitive-swarm/core": "*",
+    "@cognitive-swarm/math": "*",
+    "@cognitive-swarm/signals": "*",
+    "@cognitive-swarm/agent": "*",
+    "@cognitive-swarm/consensus": "*",
+    "@cognitive-swarm/introspection": "*",
+    "@cognitive-swarm/reputation": "*",
+    "@cognitive-engine/core": "*",
+    "@cognitive-engine/orchestrator": "*",
+    "@cognitive-engine/bandit": "*"
+  },
+  "license": "Apache-2.0",
+  "author": "Dmitry Zorin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/medonomator/cognitive-swarm.git",
+    "directory": "packages/orchestrator"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "@cognitive-swarm/benchmarks",
+  "version": "0.1.0",
+  "description": "Benchmark suite — prove swarm > single model",
+  "type": "module",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "bench": "tsx src/run.ts",
+    "bench:review": "tsx src/run.ts --bench=code-review",
+    "bench:research": "tsx src/run.ts --bench=research",
+    "bench:adversarial": "tsx src/run.ts --bench=adversarial",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist results"
+  },
+  "dependencies": {
+    "@cognitive-swarm/core": "*",
+    "@cognitive-swarm/signals": "*",
+    "@cognitive-swarm/agent": "*",
+    "@cognitive-swarm/consensus": "*",
+    "@cognitive-swarm/orchestrator": "*",
+    "@cognitive-swarm/templates": "*",
+    "@cognitive-swarm/math": "*",
+    "@cognitive-swarm/memory-pool": "*",
+    "@cognitive-swarm/memory-qdrant": "*",
+    "@cognitive-engine/core": "*",
+    "openai": "^4"
+  },
+  "devDependencies": {
+    "tsx": "^4"
+  },
+  "license": "Apache-2.0",
+  "author": "Dmitry Zorin"
+}

@@ -1,0 +1,36 @@
+{
+  "results": [
+    {
+      "name": "Adversarial Robustness",
+      "description": "Detect planted falsehood among true claims. Swarm of 4 vs single model.",
+      "swarm": {
+        "answer": "No consensus reached",
+        "score": 0,
+        "tokensUsed": 39815,
+        "durationMs": 71404,
+        "costUsd": 0.011347275
+      },
+      "baseline": {
+        "answer": "Let's evaluate each claim one by one:\n\n1. **JavaScript uses prototypal inheritance, not classical inheritance.**\n   - **TRUE**: JavaScript employs prototypal inheritance, which means that objects can inherit directly from other objects. This is different from classical inheritance, which is typically seen in languages like Java or C++, where classes are the primary means of inheritance.\n\n2. **TCP is a connectionless protocol that does not guarantee delivery order.**\n   - **FALSE**: TCP (Transmission Control Protocol) is a connection-oriented protocol, meaning it establishes a connection before data can be sent. It also guarantees delivery order, ensuring that packets are delivered in the same sequence they were sent.\n\n3. **In PostgreSQL, a B-tree index is the default index type.**\n   - **TRUE**: In PostgreSQL, the default index type is indeed a B-tree index. This type of index is used for most queries and is optimized for equality and range queries.\n\n4. **React's virtual DOM compares the new tree with the previous one using a diffing algorithm.**\n   - **TRUE**: React uses a virtual DOM to optimize rendering performance. When the state of a component changes, React creates a new virtual DOM tree and compares it with the previous one using a diffing algorithm to determine what has changed and needs to be updated in the actual DOM.\n\n5. **HTTP/2 uses binary framing instead of text-based protocols like HTTP/1.1.**\n   - **TRUE**: HTTP/2 indeed uses binary framing, which allows for more efficient parsing and transmission of data compared to the text-based format used in HTTP/1.1. This change helps improve performance and reduces latency.\n\nIn summary:\n1. TRUE\n2. FALSE\n3. TRUE\n4. TRUE\n5. TRUE",
+        "score": 1,
+        "tokensUsed": 521,
+        "durationMs": 8225,
+        "costUsd": 0.00014848499999999999
+      },
+      "comparison": {
+        "scoreDelta": -1,
+        "costRatio": 76.42034548944339,
+        "speedRatio": 8.681337386018237,
+        "qualityPerDollar": 0,
+        "winner": "baseline"
+      },
+      "timestamp": 1776168066231
+    }
+  ],
+  "swarmWins": 0,
+  "baselineWins": 1,
+  "ties": 0,
+  "totalSwarmCost": 0.011347275,
+  "totalBaselineCost": 0.00014848499999999999,
+  "timestamp": 1776168066232
+}

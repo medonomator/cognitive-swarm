@@ -1,0 +1,48 @@
+{
+  "name": "cognitive-swarm",
+  "private": true,
+  "description": "Event-driven cognitive swarm intelligence for LLM agents",
+  "author": "Dmitry Zorin",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/medonomator/cognitive-swarm.git"
+  },
+  "homepage": "https://github.com/medonomator/cognitive-swarm",
+  "keywords": [
+    "ai",
+    "agents",
+    "swarm-intelligence",
+    "multi-agent",
+    "consensus",
+    "cognitive-engine",
+    "typescript"
+  ],
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "typecheck": "turbo run build"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.1.0"
+  },
+  "packageManager": "npm@10.0.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "https-proxy-agent": "^9.0.0",
+    "openai": "^6.34.0"
+  }
+}

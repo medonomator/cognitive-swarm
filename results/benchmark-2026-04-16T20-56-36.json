@@ -1,0 +1,117 @@
+{
+  "results": [
+    {
+      "name": "Multi-Domain Architecture",
+      "description": "Design healthcare collaborative editor covering 12 domain concerns. Swarm of 7 vs single model.",
+      "swarm": {
+        "answer": "# System Design Document for Real-Time Collaborative Document Editor\n\n## Overview\nThis document outlines the architecture for a real-time collaborative document editor tailored for a European healthcare company. The system is designed to handle sensitive patient health data while ensuring compliance with HIPAA and GDPR regulations. The architecture supports high concurrency, real-time collaboration, offline capabilities, and robust security measures.\n\n## 1. Frontend Component\n\n### Technology Choice: React.js with Yjs\n- **Rationale**: React.js is a widely adopted library for building user interfaces, providing a responsive and dynamic user experience. Yjs is a Conflict-free Replicated Data Type (CRDT) library that enables real-time synchronization with minimal latency (<100ms). This combination allows for efficient handling of concurrent edits and offline capabilities.\n  \n### Handling Constraints\n- **Concurrency**: Yjs efficiently manages real-time editing and synchronization across multiple users.\n- **Offline Mode**: Changes can be stored locally and synced when connectivity is restored, ensuring continuous user experience.\n  \n### Trade-offs\n- **Complexity**: Managing CRDT states can introduce complexity, especially in offline scenarios where merging changes can be challenging.\n\n### Failure Modes and Recovery Strategies\n- **Network Disconnections**: If a user loses connectivity, edits are stored locally. Upon reconnection, Yjs merges local changes with the server state.\n  \n### Interaction with Other Components\n- The frontend communicates with the backend via RESTful APIs for document retrieval and storage, while Yjs handles real-time updates directly between clients.\n\n## 2. Backend Component\n\n### Technology Choice: Node.js with Express and Automerge\n- **Rationale**: Node.js is well-suited for handling multiple concurrent connections due to its non-blocking I/O model. Automerge, another CRDT library, allows for real-time collaborative editing and supports offline capabilities.\n\n### Handling Constraints\n- **Real-Time Collaboration**: Automerge enables real-time editing and conflict resolution, allowing users to work simultaneously without data loss.\n- **Audit Trail**: The backend can log every edit made to documents, ensuring compliance with regulatory requirements.\n\n### Trade-offs\n- **Performance Overhead**: Automerge's complex data structures may introduce performance overhead compared to simpler models.\n\n### Failure Modes and Recovery Strategies\n- **Backend Downtime**: If the backend goes down, user edits are preserved locally. Upon recovery, the system syncs changes stored on user devices.\n\n### Interaction with Other Components\n- The backend serves as the intermediary",
+        "score": 0.5,
+        "tokensUsed": 49848,
+        "durationMs": 631584,
+        "costUsd": 0.01420668,
+        "signalCount": 7,
+        "roundsUsed": 1
+      },
+      "baseline": {
+        "answer": "Designing a real-time collaborative document editor for a European healthcare company involves addressing multiple requirements, including security, compliance, scalability, and performance. Below is a comprehensive architecture that meets the specified constraints.\n\n### System Architecture Overview\n\n1. **Frontend (Web Application)**\n   - **Technology**: React.js with Redux for state management\n   - **Why**: React.js provides a component-based architecture that is efficient for building interactive UIs. Redux helps manage the application state, especially for real-time updates.\n   - **Handling Constraints**: The frontend will handle real-time updates using WebSockets, ensuring <100ms latency for character-by-character sync.\n   - **Trade-offs**: The complexity of managing state in a real-time collaborative environment increases.\n   - **Failure Modes**: If the WebSocket connection fails, the application will fall back to long polling or HTTP requests for updates.\n   - **Interaction**: Communicates with the backend via WebSocket for real-time updates and REST APIs for other operations.\n\n2. **Real-time Collaboration Engine**\n   - **Technology**: Yjs or ShareDB\n   - **Why**: Both libraries provide operational transformation (OT) or conflict-free replicated data types (CRDTs) for real-time collaboration, which is essential for handling concurrent edits.\n   - **Handling Constraints**: Supports offline mode with local changes that sync when the user reconnects, resolving conflicts based on timestamps or user priorities.\n   - **Trade-offs**: Increased complexity in managing document states and potential performance overhead.\n   - **Failure Modes**: If the collaboration engine fails, users can still work offline, and changes will be reconciled upon reconnection.\n   - **Interaction**: Integrates with the backend to store document states and user sessions.\n\n3. **Backend API**\n   - **Technology**: Node.js with Express.js\n   - **Why**: Node.js is non-blocking and can handle a large number of concurrent connections, making it suitable for real-time applications.\n   - **Handling Constraints**: The API will handle user authentication, document management, and audit logging.\n   - **Trade-offs**: Node.js may not be the best choice for CPU-intensive tasks, but it excels in I/O-bound operations.\n   - **Failure Modes**: Implement clustering and load balancing to ensure high availability. Use a circuit breaker pattern to handle service failures gracefully.\n   - **Interaction**: Communicates with the database and the real-time collaboration engine.\n\n4. **Database**\n   - **Technology**: PostgreSQL with TimescaleDB extension\n   - **Why**: PostgreSQL is a robust relational database that supports complex queries and transactions. TimescaleDB allows for efficient time-series data management, which is useful for versioning and audit trails.\n   - **Handling Constraints**: Supports ACID transactions for document edits and provides point-in-time recovery for versioning.\n   - **Trade-offs**: Relational databases may not scale as easily as NoSQL solutions for certain workloads.\n   - **Failure Modes**: Use replication and automated backups to ensure data durability. Implement read replicas for load balancing.\n   - **Interaction**: The backend API interacts with the database for CRUD operations and audit logging.\n\n5. **Authentication and Authorization**\n   - **Technology**: Keycloak for identity and access management\n   - **Why**: Keycloak supports LDAP/Active Directory integration, making it suitable for enterprise environments.\n   - **Handling Constraints**: Provides secure authentication and role-based access control, ensuring compliance with HIPAA and GDPR.\n   - **Trade-offs**: Additional complexity in managing an external identity provider.\n   - **Failure Modes**: If Keycloak is down, users may not authenticate, but cached tokens can allow temporary access.\n   - **Interaction**: The backend API communicates with Keycloak for user authentication and token validation.\n\n6. **Data Encryption**\n   - **Technology**: End-to-end encryption using WebCrypto API and AES-GCM\n   - **Why**: WebCrypto API allows for secure encryption in the browser, ensuring that document content is encrypted before it reaches the server.\n   - **Handling Constraints**: Ensures that even the server cannot read document content, complying with data protection regulations.\n   - **Trade-offs**: Increased complexity in managing encryption keys and performance overhead for encryption/decryption.\n   - **Failure Modes**: If encryption fails, the document cannot be saved. Implement error handling to notify users.\n   - **Interaction**: The frontend encrypts data before sending it to the backend for storage.\n\n7. **Audit Trail**\n   - **Technology**: Custom logging mechanism in PostgreSQL\n   - **Why**: A custom solution allows for tailored logging of every edit, including user ID, timestamp, and changes made.\n   - **Handling Constraints**: Ensures compliance with regulatory requirements by maintaining a complete history of document edits.\n   - **Trade-offs**: Increased storage requirements and potential performance impact on write operations.\n   - **Failure Modes**: If logging fails, implement a retry mechanism to ensure logs are captured.\n   - **Interaction**: The backend API logs changes to the database during document edits.\n\n8. **Deployment and Infrastructure**\n   - **Technology**: Kubernetes for orchestration, AWS or GCP for cloud infrastructure\n   - **Why**: Kubernetes provides scalability and resilience, allowing for multi-region deployments and easy management of microservices.\n   - **Handling Constraints**: Deploy in EU-West and EU-Central regions to meet data residency requirements.\n   - **Trade-offs**: Increased operational complexity and potential costs associated with managing Kubernetes.\n   - **Failure Modes**: Use health checks and auto-scaling to recover from failures. Implement multi-region failover strategies.\n   - **Interaction**: All components are deployed as microservices within the Kubernetes cluster.\n\n### Cost Management\n- **Infrastructure Cost**: Aim to optimize resource usage by using spot instances for non-critical workloads and auto-scaling to match demand. Monitor usage closely to stay within the $50k/month budget.\n\n### Conclusion\nThis architecture provides a comprehensive solution for a real-time collaborative document editor that meets all specified requirements. By leveraging modern technologies and best practices, the system is designed to be secure, scalable, and compliant with healthcare regulations.",
+        "score": 1,
+        "tokensUsed": 4170,
+        "durationMs": 24939,
+        "costUsd": 0.00044459999999999996
+      },
+      "comparison": {
+        "scoreDelta": -0.5,
+        "costRatio": 31.953846153846154,
+        "speedRatio": 25.32515337423313,
+        "qualityPerDollar": 0.015647568608570053,
+        "winner": "baseline"
+      },
+      "mathAnalysis": {
+        "entropy": {
+          "final": 0,
+          "normalized": 0,
+          "history": []
+        },
+        "informationGain": {
+          "total": 0,
+          "perRound": 0,
+          "lastRound": 0
+        },
+        "redundancy": {
+          "averageNMI": 0.6,
+          "redundantAgents": [
+            "security-arch",
+            "infra-cost",
+            "identity",
+            "arch-lead"
+          ],
+          "mostUniqueAgent": "distributed-sys"
+        },
+        "markov": {
+          "dominantState": "proposal",
+          "cyclesDetected": true,
+          "cycleStates": [
+            "proposal",
+            "discovery"
+          ]
+        },
+        "bayesian": {
+          "mapEstimate": null,
+          "posteriors": {},
+          "evidenceCount": 0
+        },
+        "gameTheory": {
+          "expectedChallengers": 7,
+          "actualChallengers": 0,
+          "groupthinkRisk": "high"
+        },
+        "opinionDynamics": null,
+        "replicatorDynamics": {
+          "dominantStrategy": "discovery",
+          "convergenceToESS": 3.1917063592388186,
+          "suggestedShifts": [
+            {
+              "strategy": "discovery",
+              "direction": "increase",
+              "magnitude": 0.7900744416015744
+            },
+            {
+              "strategy": "proposal",
+              "direction": "decrease",
+              "magnitude": 0.7900744416015743
+            }
+          ]
+        },
+        "influence": null,
+        "optimalStopping": {
+          "cusumStatistic": 0.05,
+          "explorationComplete": false,
+          "changeDetected": false
+        },
+        "shapley": {
+          "values": {
+            "security-arch": 0.20000000000000007,
+            "distributed-sys": 0.20000000000000007,
+            "infra-cost": 0.20000000000000007,
+            "identity": 0.20000000000000007,
+            "arch-lead": 0.20000000000000007
+          },
+          "redundantAgents": [],
+          "topContributors": [
+            "security-arch",
+            "distributed-sys",
+            "infra-cost"
+          ]
+        },
+        "stoppingReason": null
+      },
+      "timestamp": 1776372996439
+    }
+  ],
+  "swarmWins": 0,
+  "baselineWins": 1,
+  "ties": 0,
+  "totalSwarmCost": 0.01420668,
+  "totalBaselineCost": 0.00044459999999999996,
+  "timestamp": 1776372996441
+}
