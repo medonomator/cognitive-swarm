@@ -22,14 +22,14 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@cognitive-swarm/core": "workspace:*",
-    "@cognitive-swarm/math": "workspace:*",
-    "@cognitive-swarm/signals": "workspace:*",
-    "@cognitive-swarm/agent": "workspace:*",
-    "@cognitive-swarm/consensus": "workspace:*",
-    "@cognitive-swarm/evolution": "workspace:*",
-    "@cognitive-swarm/introspection": "workspace:*",
-    "@cognitive-swarm/reputation": "workspace:*",
+    "@cognitive-swarm/core": "*",
+    "@cognitive-swarm/math": "*",
+    "@cognitive-swarm/signals": "*",
+    "@cognitive-swarm/agent": "*",
+    "@cognitive-swarm/consensus": "*",
+    "@cognitive-swarm/evolution": "*",
+    "@cognitive-swarm/introspection": "*",
+    "@cognitive-swarm/reputation": "*",
     "@cognitive-engine/core": "^0.2.0",
     "@cognitive-engine/orchestrator": "^0.2.0",
     "@cognitive-engine/bandit": "^0.2.0"

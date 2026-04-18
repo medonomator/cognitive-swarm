@@ -22,7 +22,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@cognitive-swarm/core": "workspace:*",
+    "@cognitive-swarm/core": "*",
     "@cognitive-engine/core": "^0.2.0"
   },
   "license": "Apache-2.0",

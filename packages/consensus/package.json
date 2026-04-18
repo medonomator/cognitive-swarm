@@ -22,8 +22,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@cognitive-swarm/core": "workspace:*",
-    "@cognitive-swarm/math": "workspace:*",
+    "@cognitive-swarm/core": "*",
+    "@cognitive-swarm/math": "*",
     "@cognitive-engine/core": "^0.2.0"
   },
   "license": "Apache-2.0",

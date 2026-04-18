@@ -22,7 +22,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@cognitive-swarm/core": "workspace:*"
+    "@cognitive-swarm/core": "*"
   },
   "license": "Apache-2.0",
   "author": "Dmitry Zorin",

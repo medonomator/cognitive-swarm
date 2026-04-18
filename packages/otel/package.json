@@ -22,7 +22,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@cognitive-swarm/core": "workspace:*"
+    "@cognitive-swarm/core": "*"
   },
   "peerDependencies": {
     "@opentelemetry/api": "^1.7.0"
