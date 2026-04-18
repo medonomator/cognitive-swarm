@@ -1,6 +1,6 @@
 {
   "name": "@cognitive-swarm/orchestrator",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Swarm orchestrator — ties agents, signals, and consensus into solve()",
   "type": "module",
   "main": "./dist/index.js",
