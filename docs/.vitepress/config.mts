@@ -34,7 +34,7 @@ export default defineConfig({
       ],
       '/packages/': [
         {
-          text: 'Packages',
+          text: 'Core',
           items: [
             { text: '@cognitive-swarm/core', link: '/packages/core' },
             { text: '@cognitive-swarm/orchestrator', link: '/packages/orchestrator' },
@@ -42,13 +42,40 @@ export default defineConfig({
             { text: '@cognitive-swarm/signals', link: '/packages/signals' },
             { text: '@cognitive-swarm/consensus', link: '/packages/consensus' },
             { text: '@cognitive-swarm/math', link: '/packages/math' },
+          ]
+        },
+        {
+          text: 'Composition & Evolution',
+          items: [
+            { text: '@cognitive-swarm/composer', link: '/packages/composer' },
             { text: '@cognitive-swarm/evolution', link: '/packages/evolution' },
+            { text: '@cognitive-swarm/evaluation', link: '/packages/evaluation' },
+            { text: '@cognitive-swarm/reputation', link: '/packages/reputation' },
+            { text: '@cognitive-swarm/introspection', link: '/packages/introspection' },
+            { text: '@cognitive-swarm/templates', link: '/packages/templates' },
+          ]
+        },
+        {
+          text: 'Memory',
+          items: [
+            { text: '@cognitive-swarm/memory-pool', link: '/packages/memory-pool' },
+            { text: '@cognitive-swarm/memory-qdrant', link: '/packages/memory-qdrant' },
+          ]
+        },
+        {
+          text: 'Integrations',
+          items: [
             { text: '@cognitive-swarm/otel', link: '/packages/otel' },
             { text: '@cognitive-swarm/mcp', link: '/packages/mcp' },
             { text: '@cognitive-swarm/a2a', link: '/packages/a2a' },
-            { text: '@cognitive-swarm/introspection', link: '/packages/introspection' },
-            { text: '@cognitive-swarm/reputation', link: '/packages/reputation' },
-            { text: '@cognitive-swarm/templates', link: '/packages/templates' },
+            { text: '@cognitive-swarm/tools-web-fetch', link: '/packages/tools-web-fetch' },
+            { text: '@cognitive-swarm/tools-web-search', link: '/packages/tools-web-search' },
+          ]
+        },
+        {
+          text: 'Testing',
+          items: [
+            { text: '@cognitive-swarm/benchmarks', link: '/packages/benchmarks' },
           ]
         }
       ]
